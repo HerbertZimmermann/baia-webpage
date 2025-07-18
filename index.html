@@ -88,11 +88,10 @@
 
   <script>
     window.addEventListener('DOMContentLoaded', () => {
-      // ✅ Your Supabase credentials
       const supabaseUrl = 'https://khmynualndfvegbbipfd.supabase.co';
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTI1NTUsImV4cCI6MjA2NDk2ODU1NX0.Va1zWBLYL87SAz_nIXaiJeGi56YZ1bQ7dAl_fyqS2rI';
       const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-      const tableName = 'baia'; // ✅ Make sure your table name is correct
+      const tableName = 'baia';
 
       const grid = document.getElementById('baia-grid');
 
@@ -102,21 +101,21 @@
 
         const { data, error } = await supabase
           .from(tableName)
-          .upsert({ id: baiaNumber, Escala, Peso }, { onConflict: ['id'] }); // ✅ fix
+          .upsert({ id: baiaNumber, Escala, Peso }, { onConflict: ['id'] });
 
         if (error) {
           alert(`❌ Erro ao salvar BAIA ${baiaNumber}`);
           console.error(error);
         } else {
           alert(`✅ BAIA ${baiaNumber} salva com sucesso`);
+          loadBaiaData(); // Refresh data including updated timestamp
         }
       }
 
       async function loadBaiaData() {
         const { data, error } = await supabase
           .from(tableName)
-          .select('id, Escala, Peso'); // ✅ select by id
-	  console.log("Loaded data from Supabase:", data);
+          .select('id, Escala, Peso, ultima_atualizacao');
 
         if (error) {
           console.error('❌ Error loading data:', error);
@@ -124,10 +123,17 @@
         }
 
         data.forEach(row => {
-          const EscalaInput = document.getElementById(`Escala-${row.id}`); // ✅ match by row.id
+          const EscalaInput = document.getElementById(`Escala-${row.id}`);
           const PesoInput = document.getElementById(`Peso-${row.id}`);
-          if (EscalaInput) EscalaInput.value = row.Escala;
-          if (PesoInput) PesoInput.value = row.Peso;
+          const AtualizacaoInput = document.getElementById(`Atualizacao-${row.id}`);
+
+          if (EscalaInput) EscalaInput.value = row.Escala || '';
+          if (PesoInput) PesoInput.value = row.Peso || '';
+
+          if (AtualizacaoInput && row.ultima_atualizacao) {
+            const formatted = new Date(row.ultima_atualizacao).toLocaleString();
+            AtualizacaoInput.value = formatted;
+          }
         });
       }
 
@@ -144,15 +150,18 @@
             <label for="Peso-${i}">PESO</label>
             <input type="text" id="Peso-${i}" />
           </div>
+          <div class="input-group">
+            <label for="Atualizacao-${i}">Última Atualização</label>
+            <input type="text" id="Atualizacao-${i}" readonly />
+          </div>
           <button id="btn-${i}">Salvar</button>
         `;
         grid.appendChild(div);
 
-        // Attach event to save button
         div.querySelector(`#btn-${i}`).addEventListener('click', () => saveBaia(i));
       }
 
-      loadBaiaData(); // ✅ Load existing data
+      loadBaiaData();
     });
   </script>
 
