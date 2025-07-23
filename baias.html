@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Baia Editor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f4f4f4;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+
+    .box {
+      background: white;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    .box-title {
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .input-group label {
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .input-group input {
+      padding: 0.4rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .box button {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .box button:hover {
+      background-color: #45a049;
+    }
+
+    @media (max-width: 600px) {
+      .input-group input {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Controle de Baias</h1>
+  <div class="grid" id="baia-grid"></div>
+
+  <!-- Load Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const supabaseUrl = 'https://khmynualndfvegbbipfd.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTI1NTUsImV4cCI6MjA2NDk2ODU1NX0.Va1zWBLYL87SAz_nIXaiJeGi56YZ1bQ7dAl_fyqS2rI';
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+      const tableName = 'baia';
+
+      const grid = document.getElementById('baia-grid');
+
+      async function saveBaia(baiaNumber) {
+        const Escala = document.getElementById(`Escala-${baiaNumber}`).value;
+        const Peso = document.getElementById(`Peso-${baiaNumber}`).value;
+
+        const { data, error } = await supabase
+          .from(tableName)
+          .upsert({ id: baiaNumber, Escala, Peso }, { onConflict: ['id'] });
+
+        if (error) {
+          alert(`❌ Erro ao salvar BAIA ${baiaNumber}`);
+          console.error(error);
+        } else {
+          alert(`✅ BAIA ${baiaNumber} salva com sucesso`);
+          loadBaiaData(); // Refresh data including updated timestamp
+        }
+      }
+
+      async function loadBaiaData() {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('id, Escala, Peso, ultima_atualizacao');
+
+        if (error) {
+          console.error('❌ Error loading data:', error);
+          return;
+        }
+
+        data.forEach(row => {
+          const EscalaInput = document.getElementById(`Escala-${row.id}`);
+          const PesoInput = document.getElementById(`Peso-${row.id}`);
+          const AtualizacaoInput = document.getElementById(`Atualizacao-${row.id}`);
+
+          if (EscalaInput) EscalaInput.value = row.Escala || '';
+          if (PesoInput) PesoInput.value = row.Peso || '';
+
+          if (AtualizacaoInput && row.ultima_atualizacao) {
+            const formatted = new Date(row.ultima_atualizacao).toLocaleString();
+            AtualizacaoInput.value = formatted;
+          }
+        });
+      }
+
+      for (let i = 1; i <= 22; i++) {
+        const div = document.createElement('div');
+        div.className = 'box';
+        div.innerHTML = `
+          <div class="box-title">BAIA ${i}</div>
+          <div class="input-group">
+            <label for="Escala-${i}">ESCALA</label>
+            <input type="text" id="Escala-${i}" />
+          </div>
+          <div class="input-group">
+            <label for="Peso-${i}">PESO</label>
+            <input type="text" id="Peso-${i}" />
+          </div>
+          <div class="input-group">
+            <label for="Atualizacao-${i}">Última Atualização</label>
+            <input type="text" id="Atualizacao-${i}" readonly />
+          </div>
+          <button id="btn-${i}">Salvar</button>
+        `;
+        grid.appendChild(div);
+
+        div.querySelector(`#btn-${i}`).addEventListener('click', () => saveBaia(i));
+      }
+
+      loadBaiaData();
+    });
+  </script>
+
+</body>
+</html>

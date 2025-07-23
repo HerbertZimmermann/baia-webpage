@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Menu Principal</title>
+  <title>Contas a Pagar</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -15,7 +15,7 @@
       background: #f0f0f0;
     }
 
-    .menu {
+    .container {
       text-align: center;
       background: white;
       padding: 2rem;
@@ -29,12 +29,12 @@
 
     button {
       display: block;
-      width: 200px;
+      width: 220px;
       margin: 1rem auto;
       padding: 1rem;
       font-size: 1rem;
       font-weight: bold;
-      background-color: #4CAF50;
+      background-color: #2196F3;
       color: white;
       border: none;
       border-radius: 8px;
@@ -42,15 +42,19 @@
     }
 
     button:hover {
-      background-color: #388e3c;
+      background-color: #1976D2;
     }
   </style>
 </head>
 <body>
-  <div class="menu">
-    <h1>Menu Principal</h1>
-    <button onclick="location.href='baias.html'">Baias</button>
-    <button onclick="location.href='contas.html'">Contas a Pagar</button>
+  <div class="container">
+    <h1>Contas a Pagar</h1>
+    <button onclick="window.location.href='cadastrarnovo.html'">Cadastrar Novo</button>
+    <button onclick="window.location.href='relatorios.html'">Relatórios</button>
   </div>
+
+  <script>
+
+
 </body>
 </html>

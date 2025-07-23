@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Relatórios</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #d9dde2;
+      margin: 0;
+      padding: 1rem;
+    }
+
+table td:nth-child(2),
+table th:nth-child(2) {
+  min-width: 110px;
+}
+
+
+
+tr.selected {
+  background-color: #d0ebff !important;
+}
+
+tr:hover {
+  background-color: #f0f8ff;
+  cursor: pointer;
+}
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .panel {
+      background: #f4f4f4;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+      margin-bottom: 0.8rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.3rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.4rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    .form-group-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .form-group-inline label {
+      white-space: nowrap;
+    }
+
+    button {
+      padding: 0.4rem 0.8rem;
+      border: none;
+      border-radius: 4px;
+      background-color: #6c757d;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #5a6268;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+    }
+
+    th, td {
+      border: 1px solid #aaa;
+      padding: 0.4rem;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Left Panel -->
+    <div class="panel">
+      <div class="form-group-inline">
+        <label for="dataDe">De</label>
+        <input type="text" id="dataDe" placeholder="dd/mm/aaaa" maxlength="10">
+        <label for="dataAte">a</label>
+        <input type="text" id="dataAte" placeholder="dd/mm/aaaa" maxlength="10">
+      </div>
+
+      
+
+      <div class="form-group-inline">
+        <label for="codigoFornecedor">Fornecedor</label>
+        <input type="text" id="fornecedorIdInput" placeholder="ID" style="width: 50px;">
+        <input type="text" id="fornecedorNomeInput" placeholder="Nome do Fornecedor" style="flex: 1;">
+      </div>
+
+      <div class="form-group-inline">
+        <label for="statusSelect">STATUS</label>
+        <select id="statusSelect">
+           <!-- Options will be added dynamically -->
+        </select>
+        <button id="btnAtualizar">Atualizar</button>
+      </div>
+       <!-- 👈 Move Ver Mensal to the left -->
+  <div class="panel" style="min-width: 220px;">
+    <button id="btnVerMensal" style="width: 100%; margin-bottom: 1rem;">Ver Mensal</button>
+    <table>
+      <thead>
+        <tr>
+          <th>DATA</th>
+          <th>VALOR A PAGAR</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaMensalBody">
+        <!-- dynamic rows -->
+      </tbody>
+    </table>
+  </div>
+
+
+
+
+
+    </div>
+
+    
+
+
+    
+
+    <!-- Center Panel (Empty Table Area) -->
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+	    <th>ID</th>
+            <th>Parcela</th>
+      	    <th>Data Venc</th>
+            <th>Valor Parcela</th>
+            <th>Número</th>
+            <th>Fornecedor</th>
+            <th>Status</th>
+            <th>MOD PAG</th>
+            <th>Juros</th>
+            <th>Valor Pago</th>		
+          </tr>
+        </thead>
+        <tbody id="parcelas-body">
+          <!-- dynamic rows -->
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const supabase = window.supabase.createClient(
+  'https://khmynualndfvegbbipfd.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTI1NTUsImV4cCI6MjA2NDk2ODU1NX0.Va1zWBLYL87SAz_nIXaiJeGi56YZ1bQ7dAl_fyqS2rI'
+);
+
+let fornecedorData = [];
+
+async function carregarPopupFornecedores() {
+  const popup = document.getElementById('popupModal');
+  const tbody = document.querySelector('#popupTable tbody');
+  tbody.innerHTML = '<tr><td colspan="2">Carregando...</td></tr>';
+  popup.style.display = 'block';
+
+  const { data, error } = await supabase.from('CadFornecedor').select('ID, Nome');
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="2">Erro: ${error.message}</td></tr>`;
+    return;
+  }
+
+  fornecedorData = data;
+  renderFornecedorTable(data);
+  const searchInput = document.getElementById('searchInput');
+  searchInput.value = '';
+  searchInput.oninput = () => {
+    const term = searchInput.value.trim().toLowerCase();
+    const filtered = fornecedorData.filter(row => row.Nome.toLowerCase().includes(term));
+    renderFornecedorTable(filtered);
+  };
+}
+
+function renderFornecedorTable(data) {
+  const tbody = document.querySelector('#popupTable tbody');
+  tbody.innerHTML = '';
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2">Nenhum resultado</td></tr>';
+    return;
+  }
+  data.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.ID}</td><td>${row.Nome}</td>`;
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', () => {
+      document.getElementById('fornecedorIdInput').value = row.ID;
+      document.getElementById('fornecedorNomeInput').value = row.Nome;
+      document.getElementById('popupModal').style.display = 'none';
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// Hook up double click to open
+document.getElementById('fornecedorNomeInput').addEventListener('dblclick', carregarPopupFornecedores);
+
+
+async function carregarStatusUnicos() {
+  const { data, error } = await supabase
+    .from('Parcelas')
+    .select('STATUS', { distinct: true });
+
+  if (error) {
+    console.error('Erro ao carregar STATUS:', error.message);
+    return;
+  }
+
+  const statusSelect = document.getElementById('statusSelect');
+  statusSelect.innerHTML = ''; // Clear previous options
+
+  // Optionally add a default "Todos"
+  const defaultOption = document.createElement('option');
+  defaultOption.value = 'Todos';
+  defaultOption.textContent = 'Todos';
+  statusSelect.appendChild(defaultOption);
+
+  const uniqueStatuses = [...new Set(data.map(item => item.STATUS))];
+
+  uniqueStatuses.forEach(status => {
+    const option = document.createElement('option');
+    option.value = status;
+    option.textContent = status;
+    statusSelect.appendChild(option);
+  });
+}
+
+// Call the function on page load
+document.addEventListener('DOMContentLoaded', carregarStatusUnicos);
+
+
+document.getElementById('btnAtualizar').addEventListener('click', buscarParcelas);
+
+
+async function buscarParcelas() {
+  const status = document.getElementById('statusSelect').value;
+  const de = document.getElementById('dataDe').value;
+  const ate = document.getElementById('dataAte').value;
+  const fornecedor = document.getElementById('fornecedorIdInput').value.trim();
+
+  let query = supabase
+    .from('Parcelas')
+    .select(`
+      ID,
+      PARCELA,
+      DATAVENC,
+      VALORPARCELA,
+      NUMERO,
+      STATUS,
+      FORNECEDOR,
+      CadFornecedor(Nome),
+      MODPAG,
+      JUROS,
+      VALORPAG,
+      COMPROVANTE
+    `)
+    .order('DATAVENC', { ascending: true });
+
+  if (status !== 'Todos') query = query.eq('STATUS', status);
+  if (fornecedor !== '') query = query.eq('FORNECEDOR', fornecedor);
+
+  const formatDate = (d) => {
+    const parts = d.split('/');
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
+
+  if (de) query = query.gte('DATAVENC', formatDate(de));
+  if (ate) query = query.lte('DATAVENC', formatDate(ate));
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Erro ao buscar parcelas:", error.message);
+    alert("Erro ao buscar parcelas: " + error.message);
+    return;
+  }
+
+  const tbody = document.getElementById('parcelas-body');
+  tbody.innerHTML = '';
+
+  
+
+  data.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.ID}</td>
+      <td>${row.PARCELA}</td>
+      <td>${formatDateBR(row.DATAVENC)}</td>
+      <td>${row.VALORPARCELA}</td>
+      <td>${row.NUMERO}</td>
+      <td>${row.CadFornecedor?.Nome || 'N/A'}</td>	
+      <td>${row.STATUS}</td>
+      <td>${row.MODPAG}</td>
+      <td>${row.JUROS}</td>
+      <td>${row.VALORPAG}</td>
+
+    `;
+
+    // Highlight row on click
+    tr.addEventListener('click', () => {
+      tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+      tr.classList.add('selected');
+    });
+
+    // Open modal on double-click
+    tr.addEventListener('dblclick', () => {
+      abrirEditarModal(row);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function formatDateBR(isoDate) {
+    if (!isoDate) return '';
+    const [year, month, day] = isoDate.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+function abrirEditarModal(data) {
+  document.getElementById('edit-id').value = data.ID || '';
+  document.getElementById('edit-data').value = formatDateBR(data.DATAVENC);
+  document.getElementById('edit-parcela').value = data.PARCELA;
+  document.getElementById('edit-valorparcela').value = data.VALORPARCELA?.toString().replace('.', ',') || '';
+
+  document.getElementById('edit-juros').value = data.JUROS?.toString().replace('.', ',') || '';
+
+  const valorPago = (data.VALORPAG !== null && data.VALORPAG !== undefined)
+  ? data.VALORPAG
+  : data.VALORPARCELA;
+
+  document.getElementById('edit-valorpago').value = valorPago?.toString().replace('.', ',') || '';
+
+
+
+
+  document.getElementById('edit-fornecedor').value = data.CadFornecedor?.Nome || '';
+  document.getElementById('edit-numero').value = data.NUMERO;
+  document.getElementById('edit-status').value = data.STATUS;
+  document.getElementById('edit-modopag').value = data.MODPAG || '';
+  document.getElementById('edit-comprovante').value = data.COMPROVANTE || '';
+
+
+  document.getElementById('editarModal').style.display = 'block';
+}
+
+
+
+function setupAutoDateFormat(id) {
+  const input = document.getElementById(id);
+  if (!input) return;
+
+  input.addEventListener('input', e => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 8) value = value.slice(0, 8);
+
+    if (value.length > 4) {
+      value = `${value.slice(0,2)}/${value.slice(2,4)}/${value.slice(4)}`;
+    } else if (value.length > 2) {
+      value = `${value.slice(0,2)}/${value.slice(2)}`;
+    }
+
+    e.target.value = value;
+  });
+}
+
+// Call this after DOMContentLoaded
+setupAutoDateFormat('dataDe');
+setupAutoDateFormat('dataAte');
+
+
+function fecharEditarModal() {
+    document.getElementById('editarModal').style.display = 'none';
+  }
+
+function LiquidarModal() {
+  const id = document.getElementById('edit-id').value;
+  const valorPago = parseFloat(document.getElementById('edit-valorpago').value.replace(',', '.')) || 0;
+  const comprovante = document.getElementById('edit-comprovante').value;
+  const juros = parseFloat(document.getElementById('edit-juros').value.replace(',', '.')) || 0;
+
+  if (!id) {
+    alert("ID inválido.");
+    return;
+  }
+
+  supabase
+    .from('Parcelas')
+    .update({
+      VALORPAG: valorPago,
+      COMPROVANTE: comprovante,
+      JUROS: juros,
+      STATUS: 'LIQUIDADO'
+    })
+    .eq('ID', id)
+    .then(({ error }) => {
+      if (error) {
+        console.error("Erro ao liquidar:", error);
+        alert("Erro ao liquidar parcela: " + error.message);
+      } else {
+        alert("Parcela liquidada com sucesso!");
+        fecharEditarModal();
+        buscarParcelas();
+      }
+    });
+}
+
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btnSalvar = document.getElementById('btnSalvarEdicao');
+  if (btnSalvar) {
+    btnSalvar.addEventListener('click', async () => {
+      const id = document.getElementById('edit-id').value;
+      const dataVenc = document.getElementById('edit-data').value;
+      const parcela = document.getElementById('edit-parcela').value;
+      
+
+   function parseDecimalRaw(input) {
+  if (!input) return 0;
+  return parseFloat(
+    input.replace(/\./g, '').replace(',', '.')
+  ) || 0;
+}
+
+
+const valorParcela = parseDecimalRaw(document.getElementById('edit-valorparcela').value);
+const juros = parseDecimalRaw(document.getElementById('edit-juros').value);
+const valorPago = parseDecimalRaw(document.getElementById('edit-valorpago').value);
+
+
+
+
+      const numero = document.getElementById('edit-numero').value;
+      const status = document.getElementById('edit-status').value;
+      const modopag = document.getElementById('edit-modopag').value;
+      const comprovante = document.getElementById('edit-comprovante').value;
+
+      const formatToISO = (dateStr) => {
+        const [dd, mm, yyyy] = dateStr.split('/');
+        return `${yyyy}-${mm}-${dd}`;
+      };
+
+      const { error } = await supabase
+        .from('Parcelas')
+        .update({
+          DATAVENC: formatToISO(dataVenc),
+          PARCELA: parcela,
+          VALORPARCELA: valorParcela,
+          JUROS: juros,
+          VALORPAG: valorPago,
+          NUMERO: numero,
+          STATUS: status,
+          MODPAG: modopag,
+          COMPROVANTE: comprovante
+        })
+        .eq('ID', id);
+
+      if (error) {
+        alert('Erro ao atualizar: ' + error.message);
+        console.error(error);
+      } else {
+        alert('Registro atualizado com sucesso!');
+        fecharEditarModal();
+        buscarParcelas();
+      }
+    });
+  }
+});
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const valorParcelaInput = document.getElementById('edit-valorparcela');
+  const valorPagoInput = document.getElementById('edit-valorpago');
+  const jurosInput = document.getElementById('edit-juros');
+
+  if (valorParcelaInput && valorPagoInput && jurosInput) {
+    valorPagoInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form submit
+        const valorParcela = parseFloat(valorParcelaInput.value.replace(',', '.')) || 0;
+        const valorPago = parseFloat(valorPagoInput.value.replace(',', '.')) || 0;
+        const juros = valorPago - valorParcela;
+        jurosInput.value = juros.toString().replace('.', ',');
+
+        jurosInput.value = juros;
+      }
+    });
+  }
+});
+
+
+
+
+
+
+
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="editarModal" style="
+  display: none;
+  position: fixed;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #d9dde2;
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.3);
+  z-index: 9999;
+  width: 600px;
+">
+  <form id="editarForm" onsubmit="return false;">
+    <label>ID: <input id="edit-id" type="text" readonly /></label><br>
+    <label>Data Venc: <input id="edit-data" type="text" /></label><br>
+    <label>Parcela: <input id="edit-parcela" type="text" /></label><br>
+    <label>Valor Parcela: <input id="edit-valorparcela" type="text" /></label><br>
+    <label>Juros: <input id="edit-juros" type="text" value="0" /></label><br>
+    <label>Valor Pago: <input id="edit-valorpago" type="text" /></label><br>
+    <label>Fornecedor: <input id="edit-fornecedor" type="text" /></label><br>
+    <label>Número: <input id="edit-numero" type="text" /></label><br>
+    <label>Status: <input id="edit-status" type="text" /></label><br>
+    <label>Modo Pag: <input id="edit-modopag" type="text" /></label><br><br>
+    <label>Comprovante: <input id="edit-comprovante" type="text" /></label><br><br>
+
+    <button type="submit" id="btnSalvarEdicao">Salvar Alterações</button>
+    <button type="button" onclick="fecharEditarModal()">Fechar</button>
+    <button type="button" onclick="LiquidarModal()">Liquidar</button>
+  </form>
+</div>
+
+
+
+
+<!-- Fornecedor Popup Modal -->
+<div id="popupModal" style="display:none; position:fixed; top:10%; left:10%; right:10%; bottom:10%; background:white; border:2px solid #ccc; padding:1rem; overflow:auto; box-shadow: 0 0 12px rgba(0,0,0,0.2); z-index:999;">
+  <h3>Selecione o Fornecedor</h3>
+
+  <input type="text" id="searchInput" placeholder="Filtrar por nome..." style="width:100%; padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;" />
+
+  <table id="popupTable" style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="border:1px solid #ccc;">Código</th>
+        <th style="border:1px solid #ccc;">Fornecedor</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <br>
+  <button onclick="document.getElementById('popupModal').style.display='none'">Fechar</button>
+</div>
+
+
+
+
+
+
+
+</body>
+</html>

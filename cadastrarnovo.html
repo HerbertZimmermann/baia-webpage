@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cadastrar Novo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #d9dde2;
+      padding: 2rem;
+    }
+
+    .form-container {
+      max-width: 600px;
+      background: #f0f0f0;
+      margin: auto;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      flex: 0 0 120px;
+    }
+
+    .form-group input, .form-group select {
+      flex: 1;
+      padding: 0.4rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .form-group button {
+      padding: 0.4rem 0.8rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    th, td {
+      border: 1px solid #aaa;
+      padding: 0.4rem;
+      text-align: center;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      margin-top: 1rem;
+    }
+
+    .radio-group label {
+      margin-bottom: 0.3rem;
+    }
+
+    .btn-submit {
+      margin-top: 1rem;
+      padding: 0.6rem 1.5rem;
+      font-weight: bold;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .btn-submit:hover {
+      background-color: #388e3c;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="form-container">
+    <h2>Cadastrar Nova Conta</h2>
+
+    <div class="form-group">
+      <label>Data:</label>
+      <input type="text" id="dataInput" placeholder="dd/mm/aaaa" maxlength="10" />
+    </div>
+
+<div class="form-group">
+  <label>Código:</label>
+  <input type="text" id="codigoInput" />
+  <button id="btnAddFornecedor">+</button>
+  <button>+</button>
+</div>
+
+<div class="form-group">
+  <label>Fornecedor:</label>
+  <input type="text" id="fornecedorInput" />
+</div>
+
+
+    <div class="form-group">
+  <label>Número:</label>
+  <input type="text" id="numeroInput" placeholder="Número" />
+  </div>
+
+
+    <div class="form-group">
+      <label>Valor:</label>
+      <input type="text" id="valorInput" />
+    </div>
+
+    <div class="form-group">
+      <label>Modo Pag:</label>
+      <select>
+
+      </select>
+      <button>+</button>
+    </div>
+
+    <div class="form-group">
+  <label>Parcelas:</label>
+  <select id="parcelasSelect">
+    <option>1</option>
+    <option>2</option>
+    <option>3</option>
+    <option>4</option>
+    <option>5</option>
+    <option>6</option>
+    <option>7</option>
+    <option>8</option>
+    <option>9</option>
+    <option>10</option>
+  </select>
+</div>
+
+
+    <div class="form-group">
+      <label>Dias Parcelas:</label>
+      <input type="text" id="diasParcelasInput" value="30" />
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Parcela</th>
+          <th>Data Venc</th>
+          <th>Valor</th>
+        </tr>
+      </thead>
+      <tbody id="parcelas-body">
+        <!-- future content -->
+      </tbody>
+    </table>
+
+    <div class="radio-group">
+      <label><input type="radio" name="liquidar" /> Liquidar?</label>
+      <label><input type="radio" name="liquidar" /> Liquidar apenas primeira parcela</label>
+      <label><input type="radio" name="liquidar" checked /> Nenhum</label>
+    </div>
+
+    <button class="btn-submit">Salvar</button>
+  </div>
+
+
+
+
+<!-- ✅ Updated Section Only -->
+<!-- You should replace your existing <script> section with this one -->
+
+<!-- Supabase SDK must load first -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+  const supabaseUrl = 'https://khmynualndfvegbbipfd.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTI1NTUsImV4cCI6MjA2NDk2ODU1NX0.Va1zWBLYL87SAz_nIXaiJeGi56YZ1bQ7dAl_fyqS2rI';
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  let fornecedorData = []; // Cache fornecedores for filtering
+
+  async function carregarPopupFornecedores() {
+    const popup = document.getElementById('popupModal');
+    const tbody = document.querySelector('#popupTable tbody');
+    tbody.innerHTML = '<tr><td colspan="2">Carregando...</td></tr>';
+    popup.style.display = 'block';
+
+    const { data, error } = await supabase.from('CadFornecedor').select('ID, Nome');
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="2">Erro: ${error.message}</td></tr>`;
+      return;
+    }
+
+    fornecedorData = data;
+    renderFornecedorTable(data);
+    const searchInput = document.getElementById('searchInput');
+    searchInput.value = '';
+    searchInput.oninput = () => {
+      const term = searchInput.value.trim().toLowerCase();
+      const filtered = fornecedorData.filter(row => row.Nome.toLowerCase().includes(term));
+      renderFornecedorTable(filtered);
+    };
+  }
+
+  function renderFornecedorTable(data) {
+    const tbody = document.querySelector('#popupTable tbody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2">Nenhum resultado</td></tr>';
+      return;
+    }
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${row.ID}</td><td>${row.Nome}</td>`;
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', () => {
+        document.getElementById('codigoInput').value = row.ID;
+        document.getElementById('fornecedorInput').value = row.Nome;
+        document.getElementById('popupModal').style.display = 'none';
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function salvarNovoFornecedor() {
+    const nome = document.getElementById('novoNomeInput').value.trim();
+    if (!nome) {
+      alert("Digite um nome válido.");
+      return;
+    }
+
+    const { data, error } = await supabase.from('CadFornecedor').insert([{ Nome: nome }]);
+    if (error) {
+      alert("Erro ao salvar fornecedor: " + error.message);
+      return;
+    }
+
+    alert("Fornecedor salvo com sucesso!");
+    document.getElementById('newFornecedorModal').style.display = 'none';
+    if (data && data.length > 0) {
+      document.getElementById('codigoInput').value = data[0].ID;
+      document.getElementById('fornecedorInput').value = data[0].Nome;
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+
+
+
+
+
+
+    const dataInput = document.getElementById('dataInput');
+    const today = new Date();
+    dataInput.value = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
+
+const body = document.getElementById('parcelas-body');
+
+body.addEventListener('input', (e) => {
+  const cell = e.target;
+
+  if (!cell.classList.contains('data-venc-cell')) return;
+
+  let text = cell.innerText.replace(/\D/g, '');
+
+  if (text.length > 8) text = text.slice(0, 8);
+
+  if (text.length > 4) {
+    text = `${text.slice(0, 2)}/${text.slice(2, 4)}/${text.slice(4)}`;
+  } else if (text.length > 2) {
+    text = `${text.slice(0, 2)}/${text.slice(2)}`;
+  }
+
+  if (cell.innerText !== text) {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    cell.innerText = text;
+
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+});
+
+
+
+
+
+
+   // ✅ Preencher combo Modo Pag com dados do Supabase
+async function carregarModosPagamento() {
+  const selectModoPag = document.querySelector('select'); // ou use um id se tiver
+  const { data, error } = await supabase.from('CadModPag').select('Nome');
+
+  if (error) {
+    console.error('Erro ao buscar modos de pagamento:', error.message);
+    return;
+  }
+
+  // Limpa o conteúdo atual e adiciona as opções
+  selectModoPag.innerHTML = '';
+  data.forEach(row => {
+    const option = document.createElement('option');
+    option.value = row.Nome;
+    option.textContent = row.Nome;
+    selectModoPag.appendChild(option);
+  });
+}
+
+carregarModosPagamento();
+
+
+// Evento ao pressionar Enter no campo Valor
+document.getElementById('valorInput').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+
+    const dataBase = document.getElementById('dataInput').value;
+    const parcelas = parseInt(document.getElementById('parcelasSelect').value);
+    const dias = parseInt(document.getElementById('diasParcelasInput').value);
+    const valorTotal = parseFloat(this.value.replace(',', '.'));
+
+    if (!dataBase || isNaN(parcelas) || isNaN(dias) || isNaN(valorTotal)) {
+      alert('Verifique os campos Data, Parcelas, Dias Parcelas e Valor.');
+      return;
+    }
+
+    const [dia, mes, ano] = dataBase.split('/');
+    const baseDate = new Date(`${ano}-${mes}-${dia}`);
+    const valorParcela = (valorTotal / parcelas).toFixed(2);
+
+    const tbody = document.getElementById('parcelas-body');
+    tbody.innerHTML = '';
+
+    for (let i = 0; i < parcelas; i++) {
+      const vencimento = new Date(baseDate);
+      vencimento.setDate(vencimento.getDate() + (dias * i));
+      const vencDia = String(vencimento.getDate()).padStart(2, '0');
+      const vencMes = String(vencimento.getMonth() + 1).padStart(2, '0');
+      const vencAno = vencimento.getFullYear();
+      const vencimentoFormatado = `${vencDia}/${vencMes}/${vencAno}`;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td contenteditable="true">${i + 1}</td>
+        <td contenteditable="true" class="data-venc-cell">${vencimentoFormatado}</td>
+        <td contenteditable="true">${valorParcela}</td>
+      `;
+      tbody.appendChild(tr);     
+
+    }
+  }
+});
+
+
+
+
+  async function salvarConta() {
+    const dataInput = document.getElementById('dataInput').value.trim();
+    const [dia, mes, ano] = dataInput.split('/');
+    const data = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+
+    const codigo = document.getElementById('codigoInput').value.trim();
+    const numero = document.getElementById('numeroInput').value.trim();
+    const valor = document.getElementById('valorInput').value.trim();
+    const modopag = document.querySelector('select').value;
+    const parcelas = parseInt(document.getElementById('parcelasSelect').value);
+
+    // Check for required fields
+    if (!data || !codigo || !numero || !valor || !modopag || isNaN(parcelas)) {
+      alert("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    // INSERT INTO TITULOS
+    const { error: insertTituloError } = await supabase.from('Titulos').insert([{
+      DATA: data,
+      FORNECEDOR: codigo,
+      NUMERO: numero,
+      VALOR: parseFloat(valor.replace(',', '.')),
+      MODOPAG: modopag,
+      PARCELAS: parcelas
+    }]);
+
+    if (insertTituloError) {
+      alert("Erro ao salvar título: " + insertTituloError.message);
+      return;
+    }
+
+    // Determine radio selection
+    let statusAll = "ABERTO";
+    const radios = document.querySelectorAll('input[name="liquidar"]');
+    let statusLogic = 'nenhum';
+    if (radios[0].checked) statusLogic = 'todos';
+    if (radios[1].checked) statusLogic = 'primeiro';
+
+    // INSERT INTO PARCELAS
+    const linhas = document.querySelectorAll('#parcelas-body tr');
+    for (let i = 0; i < linhas.length; i++) {
+      const cols = linhas[i].querySelectorAll('td');
+      const parcelaN = cols[0].innerText.trim();
+      const dataVenc = cols[1].innerText.trim();
+      const valorParcela = parseFloat(cols[2].innerText.trim().replace(',', '.'));
+
+
+      const [dia, mes, ano] = dataVenc.split('/');
+      const dataFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+
+      let status = 'ABERTO';
+      if (statusLogic === 'todos') status = 'LIQUIDADO';
+      else if (statusLogic === 'primeiro' && i === 0) status = 'LIQUIDADO';
+
+      const { error: parcelaError } = await supabase.from('Parcelas').insert([{
+        DATAVENC: dataFormatada,
+        PARCELA: parseInt(parcelaN),
+        VALORPARCELA: valorParcela,
+        FORNECEDOR: codigo,
+        NUMERO: numero,
+        STATUS: status
+      }]);
+
+      if (parcelaError) {
+        alert(`Erro ao salvar parcela ${parcelaN}: ` + parcelaError.message);
+        return;
+      }
+    }
+
+    alert("Conta salva com sucesso!");
+
+
+// Safely clear inputs
+const clearValueById = id => {
+  const el = document.getElementById(id);
+  if (el) el.value = '';
+};
+
+
+clearValueById('codigoInput');
+clearValueById('fornecedorInput');
+clearValueById('valorInput');
+clearValueById('diasParcelasInput');
+
+// Clear 'Número' input field (no id, so select by placeholder)
+const numeroInput = document.getElementById('numeroInput');
+if (numeroInput) numeroInput.value = '';
+
+// Reset selects
+const parcelasSelect = document.getElementById('parcelasSelect');
+if (parcelasSelect) parcelasSelect.selectedIndex = 0;
+
+const modoPagSelect = document.querySelector('select');
+if (modoPagSelect) modoPagSelect.selectedIndex = 0;
+
+// Clear table
+const tbody = document.getElementById('parcelas-body');
+if (tbody) tbody.innerHTML = '';
+
+// Reset radio buttons (set "Nenhum")
+const radios2 = document.querySelectorAll('input[name="liquidar"]');
+if (radios2.length === 3) {
+  radios2.forEach((r, i) => r.checked = i === 2);
+}
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+  document.querySelector('.btn-submit').addEventListener('click', salvarConta);
+
+
+    dataInput.addEventListener('input', e => {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length >= 3 && value.length <= 4)
+        value = value.slice(0, 2) + '/' + value.slice(2);
+      else if (value.length > 4)
+        value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4, 8);
+      e.target.value = value;
+    });
+
+    document.getElementById('codigoInput').addEventListener('dblclick', carregarPopupFornecedores);
+    document.getElementById('btnAddFornecedor').addEventListener('click', () => {
+      document.getElementById('newFornecedorModal').style.display = 'block';
+      document.getElementById('novoNomeInput').value = '';
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+
+<div id="popupModal" style="display:none; position:fixed; top:10%; left:10%; right:10%; bottom:10%; background:white; border:2px solid #ccc; padding:1rem; overflow:auto; box-shadow: 0 0 12px rgba(0,0,0,0.2); z-index:999;">
+  <h3>Selecione o Fornecedor</h3>
+  
+  <input type="text" id="searchInput" placeholder="Filtrar por nome..." style="width:100%; padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;" />
+
+  <table id="popupTable" style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="border:1px solid #ccc;">Código</th>
+        <th style="border:1px solid #ccc;">Fornecedor</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <br>
+  <button onclick="document.getElementById('popupModal').style.display='none'">Fechar</button>
+</div>
+
+<!-- New Fornecedor Modal -->
+<div id="newFornecedorModal" style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%); background:white; padding:1rem; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.2); z-index:9999;">
+  <h3>Adicionar Fornecedor</h3>
+  <input type="text" id="novoNomeInput" placeholder="Nome do fornecedor" style="width:100%; padding:0.5rem; margin-bottom:1rem;" />
+  <div style="text-align:right;">
+    <button onclick="salvarNovoFornecedor()" style="padding:0.5rem 1rem; background:#4CAF50; color:white; border:none; border-radius:5px;">Salvar</button>
+    <button onclick="document.getElementById('newFornecedorModal').style.display='none'" style="padding:0.5rem 1rem; margin-left:0.5rem;">Cancelar</button>
+  </div>
+</div>
+
+
+
+
+
+
+</body>
+</html>
