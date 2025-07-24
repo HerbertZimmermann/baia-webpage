@@ -399,36 +399,43 @@ document.getElementById('valorInput').addEventListener('keydown', function (e) {
     if (radios[0].checked) statusLogic = 'todos';
     if (radios[1].checked) statusLogic = 'primeiro';
 
-    // INSERT INTO PARCELAS
-    const linhas = document.querySelectorAll('#parcelas-body tr');
-    for (let i = 0; i < linhas.length; i++) {
-      const cols = linhas[i].querySelectorAll('td');
-      const parcelaN = cols[0].innerText.trim();
-      const dataVenc = cols[1].innerText.trim();
-      const valorParcela = parseFloat(cols[2].innerText.trim().replace(',', '.'));
+// INSERT INTO PARCELAS
+const linhas = document.querySelectorAll('#parcelas-body tr');
+for (let i = 0; i < linhas.length; i++) {
+  const cols = linhas[i].querySelectorAll('td');
+  const parcelaN = cols[0].innerText.trim();
+  const dataVenc = cols[1].innerText.trim();
+  const valorParcela = parseFloat(cols[2].innerText.trim().replace(',', '.'));
 
+  const [dia, mes, ano] = dataVenc.split('/');
+  const dataFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
 
-      const [dia, mes, ano] = dataVenc.split('/');
-      const dataFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+  let status = 'ABERTO';
+  if (statusLogic === 'todos') status = 'LIQUIDADO';
+  else if (statusLogic === 'primeiro' && i === 0) status = 'LIQUIDADO';
 
-      let status = 'ABERTO';
-      if (statusLogic === 'todos') status = 'LIQUIDADO';
-      else if (statusLogic === 'primeiro' && i === 0) status = 'LIQUIDADO';
+  const insertData = {
+    DATAVENC: dataFormatada,
+    PARCELA: parseInt(parcelaN),
+    VALORPARCELA: valorParcela,
+    FORNECEDOR: codigo,
+    NUMERO: numero,
+    MODOPAG: modopag,
+    STATUS: status
+  };
 
-      const { error: parcelaError } = await supabase.from('Parcelas').insert([{
-        DATAVENC: dataFormatada,
-        PARCELA: parseInt(parcelaN),
-        VALORPARCELA: valorParcela,
-        FORNECEDOR: codigo,
-        NUMERO: numero,
-        STATUS: status
-      }]);
+  if (status === 'LIQUIDADO') {
+    insertData.VALORPAG = valorParcela;
+  }
 
-      if (parcelaError) {
-        alert(`Erro ao salvar parcela ${parcelaN}: ` + parcelaError.message);
-        return;
-      }
-    }
+  const { error: parcelaError } = await supabase.from('Parcelas').insert([insertData]);
+
+  if (parcelaError) {
+    alert(`Erro ao salvar parcela ${parcelaN}: ` + parcelaError.message);
+    return;
+  }
+}
+
 
     alert("Conta salva com sucesso!");
 
