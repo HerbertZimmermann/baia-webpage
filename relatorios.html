@@ -101,6 +101,14 @@ tr:hover {
         grid-template-columns: 1fr;
       }
     }
+
+/* make aggregated rows look clickable */
+#tabelaMensalBody tr { 
+  cursor: pointer; 
+}
+#tabelaMensalBody tr:hover { 
+  background: #eef7ff; 
+}
   </style>
 </head>
 <body>
@@ -132,7 +140,9 @@ tr:hover {
       </div>
        <!-- 👈 Move Ver Mensal to the left -->
   <div class="panel" style="min-width: 220px;">
-    <button id="btnVerMensal" style="width: 100%; margin-bottom: 1rem;">Ver Mensal</button>
+    <button id="btnVerMensal" style="width: 100%; margin-bottom: 0.5rem;">Ver Mensal</button>
+    <button id="btnVerDiario" style="width: 100%; margin-bottom: 1rem;">Ver Diário</button>
+
     <table>
       <thead>
         <tr>
@@ -239,6 +249,10 @@ function renderFornecedorTable(data) {
 // Hook up double click to open
 document.getElementById('fornecedorNomeInput').addEventListener('dblclick', carregarPopupFornecedores);
 
+document.getElementById('btnVerDiario').addEventListener('click', verDiario);
+document.getElementById('btnVerMensal').addEventListener('click', verMensalComSubtotais);
+
+
 
 async function carregarStatusUnicos() {
   const { data, error } = await supabase
@@ -330,13 +344,13 @@ async function buscarParcelas() {
       <td>${row.ID}</td>
       <td>${row.PARCELA}</td>
       <td>${formatDateBR(row.DATAVENC)}</td>
-      <td>${row.VALORPARCELA}</td>
+      <td>${formatBRL(row.VALORPARCELA)}</td>
       <td>${row.NUMERO}</td>
       <td>${row.CadFornecedor?.Nome || 'N/A'}</td>	
       <td>${row.STATUS}</td>
       <td>${row.MODPAG}</td>
-      <td>${row.JUROS}</td>
-      <td>${row.VALORPAG}</td>
+      <td>${formatBRL(row.JUROS)}</td>
+      <td>${formatBRL(row.VALORPAG ?? row.VALORPARCELA)}</td>
 
     `;
 
@@ -512,6 +526,196 @@ const valorPago = parseDecimalRaw(document.getElementById('edit-valorpago').valu
     });
   }
 });
+
+// shared: parse date range inputs and apply to query
+function applyDateFilters(query) {
+  const de = document.getElementById('dataDe').value;
+  const ate = document.getElementById('dataAte').value;
+  const formatDate = (d) => {
+    const parts = d.split('/');
+    if (parts.length !== 3) return null;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`; // ISO yyyy-mm-dd
+  };
+  if (de) {
+    const isoDe = formatDate(de);
+    if (isoDe) query = query.gte('DATAVENC', isoDe);
+  }
+  if (ate) {
+    const isoAte = formatDate(ate);
+    if (isoAte) query = query.lte('DATAVENC', isoAte);
+  }
+  return query;
+}
+
+function formatDateBRFromISO(isoDate) {
+  if (!isoDate) return '';
+  const [year, month, day] = isoDate.split('T')[0].split('-');
+  return `${day}/${month}/${year}`;
+}
+
+// Format number as Brazilian Real, e.g. 1234.5 -> "R$ 1.234,50"
+function formatBRL(value) {
+  const num = parseFloat(value);
+  if (isNaN(num)) return 'R$ 0,00';
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+  }).format(num);
+}
+
+
+// Daily aggregation: sum VALORPARCELA by exact date where STATUS = 'ABERTO'
+async function verDiario() {
+  let query = supabase
+    .from('Parcelas')
+    .select('DATAVENC, VALORPARCELA, STATUS')
+    .eq('STATUS', 'ABERTO')
+    .order('DATAVENC', { ascending: true });
+
+  query = applyDateFilters(query);
+
+  const { data, error } = await query;
+  if (error) {
+    alert('Erro ao carregar diário: ' + error.message);
+    console.error(error);
+    return;
+  }
+
+  // aggregate by date (day)
+  const buckets = {};
+  data.forEach(row => {
+    if (!row.DATAVENC) return;
+    const dateKey = row.DATAVENC.split('T')[0]; // yyyy-mm-dd
+    const valor = parseFloat(row.VALORPARCELA) || 0;
+    buckets[dateKey] = (buckets[dateKey] || 0) + valor;
+  });
+
+  // build display rows sorted by date
+  const sortedDates = Object.keys(buckets).sort();
+  const tbody = document.getElementById('tabelaMensalBody');
+  tbody.innerHTML = ''; // reuse that table
+
+  sortedDates.forEach(dateKey => {
+  const tr = document.createElement('tr');
+  tr.dataset.type = 'day';
+  tr.dataset.date = dateKey; // yyyy-mm-dd
+  tr.innerHTML = `
+    <td>${formatDateBRFromISO(dateKey + 'T00:00:00')}</td>
+    <td>${formatBRL(buckets[dateKey])}</td>
+  `;
+  tr.addEventListener('dblclick', () => {
+  // drill into that specific day, forcing STATUS = 'ABERTO'
+  const [year, month, day] = dateKey.split('-');
+  const formatted = `${day}/${month}/${year}`;
+  document.getElementById('dataDe').value = formatted;
+  document.getElementById('dataAte').value = formatted;
+  document.getElementById('statusSelect').value = 'ABERTO'; // enforce aberto
+  buscarParcelas();
+  document.getElementById('parcelas-body').parentElement.scrollIntoView({ behavior: 'smooth' });
+});
+
+  tbody.appendChild(tr);
+});
+
+}
+
+// Monthly aggregation with month and year subtotals and grand total
+async function verMensalComSubtotais() {
+  let query = supabase
+    .from('Parcelas')
+    .select('DATAVENC, VALORPARCELA, STATUS')
+    .eq('STATUS', 'ABERTO')
+    .order('DATAVENC', { ascending: true });
+
+  query = applyDateFilters(query);
+
+  const { data, error } = await query;
+  if (error) {
+    alert('Erro ao carregar mensal: ' + error.message);
+    console.error(error);
+    return;
+  }
+
+  // Structure: year -> month -> sum
+  const yearMonth = {};
+  data.forEach(row => {
+    if (!row.DATAVENC) return;
+    const [datePart] = row.DATAVENC.split('T');
+    const [year, month, day] = datePart.split('-');
+    const ymKey = `${year}-${month}`; // e.g. "2025-08"
+    const valor = parseFloat(row.VALORPARCELA) || 0;
+
+    if (!yearMonth[year]) yearMonth[year] = {};
+    if (!yearMonth[year][month]) yearMonth[year][month] = 0;
+    yearMonth[year][month] += valor;
+  });
+
+  // Prepare table with subtotals
+  const tbody = document.getElementById('tabelaMensalBody');
+  tbody.innerHTML = '';
+
+  let grandTotal = 0;
+  Object.keys(yearMonth).sort().forEach(year => {
+    let yearTotal = 0;
+
+    const months = Object.keys(yearMonth[year]).sort();
+    months.forEach(month => {
+  const monthSum = yearMonth[year][month];
+  yearTotal += monthSum;
+  grandTotal += monthSum;
+
+  // Row for month (show as "Mês X")
+  const displayMonth = `Mês ${parseInt(month)}`; // e.g. "Mês 6"
+  const tr = document.createElement('tr');
+  tr.dataset.type = 'month';
+  tr.dataset.year = year;
+  tr.dataset.month = month;
+  tr.innerHTML = `
+    <td>${displayMonth}</td>
+    <td>${formatBRL(monthSum)}</td>
+  `;
+  tr.addEventListener('dblclick', () => {
+  // set filters to entire month, forcing STATUS = 'ABERTO'
+  const m = String(parseInt(month)).padStart(2, '0');
+  const firstDay = `01/${m}/${year}`;
+  const lastDayDate = new Date(parseInt(year), parseInt(month), 0); // last day of that month
+  const lastDay = String(lastDayDate.getDate()).padStart(2, '0');
+  const lastDayFormatted = `${lastDay}/${m}/${year}`;
+
+  document.getElementById('dataDe').value = firstDay;
+  document.getElementById('dataAte').value = lastDayFormatted;
+  document.getElementById('statusSelect').value = 'ABERTO'; // enforce aberto
+  buscarParcelas();
+  document.getElementById('parcelas-body').parentElement.scrollIntoView({ behavior: 'smooth' });
+});
+
+  tbody.appendChild(tr);
+});
+
+
+    // Year subtotal
+    const yearSubtotalRow = document.createElement('tr');
+    yearSubtotalRow.style.fontWeight = 'bold';
+    yearSubtotalRow.innerHTML = `
+      <td>Subtotal ${year}</td>
+      <td>${formatBRL(yearTotal)}</td>
+
+    `;
+    tbody.appendChild(yearSubtotalRow);
+  });
+
+  // Grand total
+  const grandTotalRow = document.createElement('tr');
+  grandTotalRow.style.fontWeight = 'bold';
+  grandTotalRow.innerHTML = `
+    <td>Grand Total</td>
+    <td>${formatBRL(grandTotal)}</td>
+
+  `;
+  tbody.appendChild(grandTotalRow);
+}
+
 
 
 
