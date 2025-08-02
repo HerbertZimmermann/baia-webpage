@@ -420,7 +420,7 @@ for (let i = 0; i < linhas.length; i++) {
     VALORPARCELA: valorParcela,
     FORNECEDOR: codigo,
     NUMERO: numero,
-    MODOPAG: modopag,
+    MODPAG: modopag,
     STATUS: status
   };
 
@@ -450,7 +450,6 @@ const clearValueById = id => {
 clearValueById('codigoInput');
 clearValueById('fornecedorInput');
 clearValueById('valorInput');
-clearValueById('diasParcelasInput');
 
 // Clear 'Número' input field (no id, so select by placeholder)
 const numeroInput = document.getElementById('numeroInput');
