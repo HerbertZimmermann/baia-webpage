@@ -181,7 +181,7 @@ tr:hover {
             <th>Status</th>
             <th>MOD PAG</th>
             <th>Juros</th>
-            <th>Valor Pago</th>		
+            <th>Valor Pago</th>	    
           </tr>
         </thead>
         <tbody id="parcelas-body">
@@ -310,8 +310,9 @@ async function buscarParcelas() {
       MODPAG,
       JUROS,
       VALORPAG,
-      COMPROVANTE
-    `)
+      COMPROVANTE,
+      url
+      `)
     .order('DATAVENC', { ascending: true });
 
   if (status !== 'Todos') query = query.eq('STATUS', status);
@@ -350,8 +351,7 @@ async function buscarParcelas() {
       <td>${row.STATUS}</td>
       <td>${row.MODPAG}</td>
       <td>${formatBRL(row.JUROS)}</td>
-      <td>${formatBRL(row.VALORPAG ?? row.VALORPARCELA)}</td>
-
+      <td>${formatBRL(row.VALORPAG ?? row.VALORPARCELA)}</td>      
     `;
 
     // Highlight row on click
@@ -397,7 +397,7 @@ function abrirEditarModal(data) {
   document.getElementById('edit-status').value = data.STATUS;
   document.getElementById('edit-modopag').value = data.MODPAG || '';
   document.getElementById('edit-comprovante').value = data.COMPROVANTE || '';
-
+  document.getElementById('edit-origem').value = data.url || '';
 
   document.getElementById('editarModal').style.display = 'block';
 }
@@ -795,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <label>Status: <input id="edit-status" type="text" /></label><br>
     <label>Modo Pag: <input id="edit-modopag" type="text" /></label><br><br>
     <label>Comprovante: <input id="edit-comprovante" type="text" /></label><br><br>
-
+    <label>Origem: <input id="edit-origem" type="text" /></label><br><br>
     <button type="submit" id="btnSalvarEdicao">Salvar Alterações</button>
     <button type="button" onclick="fecharEditarModal()">Fechar</button>
     <button type="button" onclick="LiquidarModal()">Liquidar</button>
@@ -832,3 +832,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
