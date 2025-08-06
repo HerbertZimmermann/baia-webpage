@@ -95,9 +95,9 @@
       const grid = document.getElementById('baia-grid');
 
       async function saveBaia(baiaNumber) {
-        const Escala = document.getElementById(`Escala-${baiaNumber}`).value;
-        const Peso   = document.getElementById(`Peso-${baiaNumber}`).value;
-        const Obs    = document.getElementById(`Obs-${baiaNumber}`).value;
+        const Escala = document.getElementById(Escala-${baiaNumber}).value;
+        const Peso   = document.getElementById(Peso-${baiaNumber}).value;
+        const Obs    = document.getElementById(Obs-${baiaNumber}).value;
 
         const { error } = await supabase
           .from(tableName)
@@ -107,10 +107,10 @@
           );
 
         if (error) {
-          alert(`❌ Erro ao salvar BAIA ${baiaNumber}`);
+          alert(❌ Erro ao salvar BAIA ${baiaNumber});
           console.error(error);
         } else {
-          alert(`✅ BAIA ${baiaNumber} salva com sucesso`);
+          alert(✅ BAIA ${baiaNumber} salva com sucesso);
           loadBaiaData();
         }
       }
@@ -128,10 +128,10 @@
         console.log('📦 raw baia rows:', data);   // ← inspect what's coming back
 
         data.forEach(row => {
-          const EscalaInput      = document.getElementById(`Escala-${row.id}`);
-          const PesoInput        = document.getElementById(`Peso-${row.id}`);
-          const ObsInput         = document.getElementById(`Obs-${row.id}`);
-          const AtualizacaoInput = document.getElementById(`Atualizacao-${row.id}`);
+          const EscalaInput      = document.getElementById(Escala-${row.id});
+          const PesoInput        = document.getElementById(Peso-${row.id});
+          const ObsInput         = document.getElementById(Obs-${row.id});
+          const AtualizacaoInput = document.getElementById(Atualizacao-${row.id});
 
           if (EscalaInput) EscalaInput.value = row.Escala || '';
           if (PesoInput)   PesoInput.value   = row.Peso   || '';
@@ -148,7 +148,7 @@
       for (let i = 1; i <= 22; i++) {
         const div = document.createElement('div');
         div.className = 'box';
-        div.innerHTML = `
+        div.innerHTML = 
           <div class="box-title">BAIA ${i}</div>
           <div class="input-group">
             <label for="Escala-${i}">ESCALA</label>
@@ -167,15 +167,12 @@
             <input type="text" id="Atualizacao-${i}" readonly />
           </div>
           <button id="btn-${i}">Salvar</button>
-        `;
+        ;
         grid.appendChild(div);
-        div.querySelector(`#btn-${i}`)
+        div.querySelector(#btn-${i})
            .addEventListener('click', () => saveBaia(i));
       }
 
       loadBaiaData();
     });
   </script>
-
-</body>
-</html>
