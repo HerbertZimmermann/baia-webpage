@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cadastrar Novo</title>
+ <!-- Hide app until sessionStorage check passes -->
+ <style>#app { display: none; }</style>
+ <!-- Redirect if not logged in -->
+ <script>
+   if (!sessionStorage.getItem('logged_in_user')) {
+     window.location.replace('index.html');
+   }
+ </script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -68,7 +76,8 @@
 </head>
 <body>
 
-  <div class="form-container">
+   <div id="app">
+   <div class="form-container">
     <h2>Cadastrar Nova Conta</h2>
 
     <div class="form-group">
@@ -162,7 +171,8 @@
       <button onclick="salvarNovoFornecedor()" style="padding:0.5rem 1rem;background:#4CAF50;color:white;border:none;border-radius:5px;">Salvar</button>
       <button onclick="document.getElementById('newFornecedorModal').style.display='none'" style="padding:0.5rem 1rem;margin-left:0.5rem;">Cancelar</button>
     </div>
-  </div>
+     </div>
+ </div>
 
   <!-- Supabase + Logic -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -390,5 +400,12 @@ if (radios2.length === 3) {
     }
   </script>
 
-</body>
+   <!-- Reveal app once login check passed -->
+   <script>
+     document.addEventListener('DOMContentLoaded', () => {
+       document.getElementById('app').style.display = 'block';
+    });
+   </script>
+ </body>
 </html>
+
