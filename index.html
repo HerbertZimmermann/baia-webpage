@@ -121,7 +121,7 @@
         const u = modal.querySelector('#login-username').value.trim();
         const p = modal.querySelector('#login-password').value;
         if (await handleCustomLogin(u, p)) {
-          localStorage.setItem('logged_in_user', u);
+          sessionStorage.setItem('logged_in_user', u);
           modal.remove();
           window.location.href = redirectUrl;
         } else {
@@ -139,12 +139,13 @@
 
     document.getElementById('contas-btn')
       .addEventListener('click', () => {
-        if (localStorage.getItem('logged_in_user')) {
-          window.location.href = 'contas.html';
-        } else {
-          showLoginModal('contas.html');
-        }
+        if (sessionStorage.getItem('logged_in_user')) {
+    window.location.href = 'contas.html';
+  } else {
+    showLoginModal('contas.html');
+  }
       });
   </script>
 </body>
 </html>
+
