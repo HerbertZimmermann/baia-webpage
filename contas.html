@@ -54,7 +54,14 @@
   </div>
 
   <script>
+  if (!localStorage.getItem('logged_in_user')) {
+    alert('🔒 Você precisa fazer login primeiro');
+    window.location.href = '/';
+  }
+</script>
+
 
 
 </body>
 </html>
+
