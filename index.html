@@ -40,17 +40,114 @@
       border-radius: 8px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #388e3c;
+    }
+
+    /* login modal backdrop */
+    #login-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    /* modal content */
+    #login-modal .modal-content {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    #login-modal input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #login-modal button {
+      padding: 0.5rem;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="menu">
     <h1>Menu Principal</h1>
-    <button onclick="location.href='baias.html'">Baias</button>
-    <button onclick="location.href='contas.html'">Contas a Pagar</button>
+    <button id="baias-btn">Baias</button>
+    <button id="contas-btn">Contas a Pagar</button>
   </div>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // --- Supabase client setup ---
+    const supabaseUrl = 'https://khmynualndfvegbbipfd.supabase.co';
+    const supabaseKey =     'YOUR_ANON_KEY';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    // call your Postgres RPC to verify credentials
+    async function handleCustomLogin(username, password) {
+      const { data: allowed, error } = await supabase
+        .rpc('verify_user', { in_username: username, in_password: password });
+      if (error) {
+        console.error(error);
+        return false;
+      }
+      return allowed;
+    }
+
+    // build & show the login modal
+    function showLoginModal(onSuccessRedirect) {
+      const modal = document.createElement('div');
+      modal.id = 'login-modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <h2>Entrar</h2>
+          <input type="text" id="login-username" placeholder="Usuário" />
+          <input type="password" id="login-password" placeholder="Senha" />
+          <button id="login-submit-btn">Login</button>
+          <button id="login-cancel-btn">Cancelar</button>
+        </div>`;
+      document.body.appendChild(modal);
+
+      modal.querySelector('#login-submit-btn').addEventListener('click', async () => {
+        const u = modal.querySelector('#login-username').value;
+        const p = modal.querySelector('#login-password').value;
+        if (await handleCustomLogin(u, p)) {
+          localStorage.setItem('logged_in_user', u);
+          modal.remove();
+          window.location.href = onSuccessRedirect;
+        } else {
+          alert('❌ Usuário ou senha inválidos');
+        }
+      });
+
+      modal.querySelector('#login-cancel-btn').addEventListener('click', () => {
+        modal.remove();
+      });
+    }
+
+    // wire up buttons
+    document.getElementById('baias-btn')
+      .addEventListener('click', () => window.location.href = 'baias.html');
+
+    document.getElementById('contas-btn')
+      .addEventListener('click', () => {
+        if (localStorage.getItem('logged_in_user')) {
+          window.location.href = 'contas.html';
+        } else {
+          showLoginModal('contas.html');
+        }
+      });
+  </script>
 </body>
 </html>
