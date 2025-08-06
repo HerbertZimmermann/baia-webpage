@@ -3,7 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Relatórios</title>
+   <title>Relatórios</title>
+ <!-- Hide app until sessionStorage check passes -->
+ <style>#app { display: none; }</style>
+ <!-- Redirect if not logged in -->
+ <script>
+  if (!sessionStorage.getItem('logged_in_user')) {
+     window.location.replace('index.html');
+   }
+ </script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -111,7 +119,8 @@ tr:hover {
 }
   </style>
 </head>
-<body>
+ <body>
+   <div id="app">
 
   <div class="container">
     <!-- Left Panel -->
@@ -827,9 +836,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+   </div> <!-- end #app -->
 
+  <!-- Reveal app once login check passed -->
+   <script>
+     document.addEventListener('DOMContentLoaded', () => {
+       document.getElementById('app').style.display = 'block';
+     });
+   </script>
 
 
 </body>
 </html>
+
 
