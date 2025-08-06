@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Contas a Pagar</title>
+
+  <!-- Hide the app until session check passes -->
   <style>
+    #app { display: none; }
     body {
       font-family: Arial, sans-serif;
       display: flex;
@@ -14,7 +17,6 @@
       margin: 0;
       background: #f0f0f0;
     }
-
     .container {
       text-align: center;
       background: white;
@@ -22,11 +24,9 @@
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-
     h1 {
       margin-bottom: 2rem;
     }
-
     button {
       display: block;
       width: 220px;
@@ -40,28 +40,31 @@
       border-radius: 8px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #1976D2;
     }
   </style>
+
+  <!-- Session check: redirect if not logged in -->
+  <script>
+    if (!sessionStorage.getItem('logged_in_user')) {
+      // Redirect to the main menu or login page
+      window.location.replace('index.html');
+    }
+  </script>
 </head>
 <body>
-  <div class="container">
+  <div id="app" class="container">
     <h1>Contas a Pagar</h1>
     <button onclick="window.location.href='cadastrarnovo.html'">Cadastrar Novo</button>
     <button onclick="window.location.href='relatorios.html'">Relatórios</button>
   </div>
 
+  <!-- Reveal the app once DOM is ready -->
   <script>
-  if (!localStorage.getItem('logged_in_user')) {
-    alert('🔒 Você precisa fazer login primeiro');
-    window.location.href = '/';
-  }
-</script>
-
-
-
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('app').style.display = 'block';
+    });
+  </script>
 </body>
 </html>
-
