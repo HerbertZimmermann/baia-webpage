@@ -82,6 +82,7 @@
     <h1>Menu Principal</h1>
     <button id="baias-btn">Baias</button>
     <button id="contas-btn">Contas a Pagar</button>
+    <button id="nivel-btn">Nível Silos</button>
   </div>
 
   <!-- Supabase JS -->
@@ -136,7 +137,10 @@
     // 4) Wire up the two buttons
     document.getElementById('baias-btn')
       .addEventListener('click', () => window.location.href = 'baias.html');
-
+    
+    document.getElementById('nivel-btn')
+      .addEventListener('click', () => window.location.href = 'nivel.html');
+    
     document.getElementById('contas-btn')
       .addEventListener('click', () => {
         if (sessionStorage.getItem('logged_in_user')) {
@@ -148,4 +152,5 @@
   </script>
 </body>
 </html>
+
 
