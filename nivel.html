@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nível dos Silos</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f9;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #1e3a5f;
+            margin-bottom: 25px;
+        }
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #eef2f5;
+            border-radius: 8px;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        .filter-group input,
+        .filter-group select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        #updateButton {
+            padding: 12px 25px;
+            background-color: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            align-self: flex-end; /* Alinha com a base dos inputs */
+        }
+        #updateButton:hover {
+            background-color: #1e3a5f;
+        }
+        .chart-container {
+            position: relative;
+            height: 60vh; /* Altura de 60% da tela */
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Monitoramento de Nível dos Silos</h1>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label for="startDate">Data e Hora de Início:</label>
+                <input type="datetime-local" id="startDate">
+            </div>
+
+            <div class="filter-group">
+                <label for="endDate">Data e Hora de Fim:</label>
+                <input type="datetime-local" id="endDate">
+            </div>
+
+            <div class="filter-group">
+                <label for="siloSelect">Silo:</label>
+                <select id="siloSelect">
+                    <option value="all">Ambos</option>
+                    <option value="1">Silo 1</option>
+                    <option value="2">Silo 2</option>
+                </select>
+            </div>
+
+            <button id="updateButton">Atualizar Gráfico</button>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="siloChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://khmynualndfvegbbipfd.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTM5MjU1NSwiZXhwIjoyMDY0OTY4NTU1fQ.Ul907qy1BbkprcsSgHN8bXT-oayyUZHNubB1gaJ1Zk0";
+
+        // Inicializa o cliente Supabase
+        // CORREÇÃO: Usamos o objeto global 'supabase' para criar uma nova instância
+        // do cliente com um nome diferente para evitar conflito.
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Referências aos elementos do HTML
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const siloSelect = document.getElementById('siloSelect');
+        const updateButton = document.getElementById('updateButton');
+        const ctx = document.getElementById('siloChart').getContext('2d');
+        
+        let siloLevelChart; // Variável para armazenar a instância do gráfico
+
+        /**
+         * Inicializa um gráfico Chart.js vazio.
+         */
+        function initializeChart() {
+            siloLevelChart = new Chart(ctx, {
+                type: 'line', // Tipo do gráfico
+                data: {
+                    datasets: [{
+                        label: 'Silo 1',
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        data: [], // Os dados serão preenchidos depois
+                        tension: 0.1, // Deixa a linha levemente curvada
+                        borderWidth: 2,
+                    }, {
+                        label: 'Silo 2',
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        data: [],
+                        tension: 0.1,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time', // Eixo X é baseado em tempo
+                            time: {
+                                unit: 'hour',
+                                tooltipFormat: 'dd/MM/yyyy HH:mm', // Formato da dica
+                                displayFormats: {
+                                    hour: 'HH:mm' // Formato da exibição no eixo
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Data e Hora'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Distância (cm)'
+                            },
+                            // Inverte o eixo Y se necessário (ex: 0 no topo)
+                            // reverse: true 
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Busca os dados no Supabase com base nos filtros e atualiza o gráfico.
+         */
+        async function fetchDataAndDrawChart() {
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+            const selectedSilo = siloSelect.value;
+            
+            if (!startDate || !endDate) {
+                alert('Por favor, selecione as datas de início e fim.');
+                return;
+            }
+
+            updateButton.textContent = 'Carregando...';
+            updateButton.disabled = true;
+
+            try {
+                // Inicia a query ao Supabase usando a variável correta 'supabaseClient'
+                let query = supabaseClient
+                    .from('leituras_silo')
+                    .select('created_at, distance, silo_id')
+                    .gte('created_at', new Date(startDate).toISOString()) // Maior ou igual a
+                    .lte('created_at', new Date(endDate).toISOString())   // Menor ou igual a
+                    .order('created_at', { ascending: true }); // Ordena por data
+
+                // Adiciona o filtro de silo se não for "Ambos"
+                if (selectedSilo !== 'all') {
+                    query = query.eq('silo_id', selectedSilo);
+                }
+
+                // Executa a query
+                const { data, error } = await query;
+
+                if (error) {
+                    throw error;
+                }
+
+                // Prepara os dados para o gráfico
+                const silo1Data = [];
+                const silo2Data = [];
+
+                data.forEach(leitura => {
+                    const point = {
+                        x: new Date(leitura.created_at), // O eixo X é a data
+                        y: leitura.distance // O eixo Y é a distância
+                    };
+
+                    if (leitura.silo_id === 1) {
+                        silo1Data.push(point);
+                    } else if (leitura.silo_id === 2) {
+                        silo2Data.push(point);
+                    }
+                });
+
+                // Atualiza os dados no gráfico
+                siloLevelChart.data.datasets[0].data = silo1Data;
+                siloLevelChart.data.datasets[1].data = silo2Data;
+                
+                // Oculta/mostra as linhas do gráfico de acordo com o filtro
+                siloLevelChart.data.datasets[0].hidden = (selectedSilo === '2');
+                siloLevelChart.data.datasets[1].hidden = (selectedSilo === '1');
+
+                // Manda o gráfico se redesenhar
+                siloLevelChart.update();
+
+            } catch (error) {
+                console.error('Erro ao buscar dados do Supabase:', error);
+                alert('Falha ao carregar os dados do Supabase. Verifique o console para mais detalhes.');
+            } finally {
+                updateButton.textContent = 'Atualizar Gráfico';
+                updateButton.disabled = false;
+            }
+        }
+
+        /**
+         * Formata um objeto Date para o formato que o input datetime-local aceita (YYYY-MM-DDTHH:mm).
+         */
+        function formatDateForInput(date) {
+            const pad = (num) => num.toString().padStart(2, '0');
+            const year = date.getFullYear();
+            const month = pad(date.getMonth() + 1);
+            const day = pad(date.getDate());
+            const hours = pad(date.getHours());
+            const minutes = pad(date.getMinutes());
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        
+        // --- CÓDIGO DE INICIALIZAÇÃO ---
+        // Roda quando a página termina de carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            // Define as datas padrão para o dia de hoje
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+            startDateInput.value = formatDateForInput(startOfDay);
+            endDateInput.value = formatDateForInput(endOfDay);
+            
+            // Adiciona o evento de clique ao botão
+            updateButton.addEventListener('click', fetchDataAndDrawChart);
+
+            // Inicializa o gráfico e busca os dados iniciais
+            initializeChart();
+            fetchDataAndDrawChart();
+        });
+
+    </script>
+</body>
+</html>
