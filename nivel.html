@@ -156,17 +156,13 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            unit: 'hour', 
-                            type: 'time',
-                            time: {
-                                tooltipFormat: 'dd/MM/yyyy HH:mm',
-                                displayFormats: {
-                                    hour: 'HH:mm'                                    
-                                }
-                            },
-                            title: {
-                                display: true,
-                                text: 'Data e Hora'
+                        type: 'time',
+                        time: {
+                            unit: 'hour', // Correctly placed inside the 'time' object
+                            tooltipFormat: 'dd/MM/yyyy HH:mm',
+                            displayFormats: {
+                                // This now tells the chart to display only the hour number
+                                hour: 'H' 
                             }
                         },
                         y: {
@@ -287,3 +283,4 @@
 </body>
 
 </html>
+
