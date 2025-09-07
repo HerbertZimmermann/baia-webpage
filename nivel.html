@@ -218,8 +218,8 @@
                     .select('created_at, distance, silo_id')
                     .gte('created_at', new Date(startDate).toISOString()) // Maior ou igual a
                     .lte('created_at', new Date(endDate).toISOString())   // Menor ou igual a
-                    .order('created_at', { ascending: true }); // Ordena por data
-
+                    .order('created_at', { ascending: true }) // Ordena por data
+                    .limit(5000);
                 // Adiciona o filtro de silo se não for "Ambos"
                 if (selectedSilo !== 'all') {
                     query = query.eq('silo_id', selectedSilo);
@@ -303,4 +303,5 @@
 
     </script>
 </body>
+
 </html>
