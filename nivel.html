@@ -156,13 +156,22 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                        type: 'time',
-                        time: {
-                            unit: 'hour', // Correctly placed inside the 'time' object
-                            tooltipFormat: 'dd/MM/yyyy HH:mm',
-                            displayFormats: {
-                                // This now tells the chart to display only the hour number
-                                hour: 'H' 
+                            type: 'time',
+                            time: {
+                                // 1. Força o eixo a usar 'hora' como sua unidade principal
+                                unit: 'hour', 
+                                
+                                // 2. Mantém o tooltip detalhado ao passar o mouse
+                                tooltipFormat: 'dd/MM/yyyy HH:mm',
+
+                                // 3. Formata a exibição do rótulo para mostrar apenas o número da hora (0-23)
+                                displayFormats: {
+                                    hour: 'H' 
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Hora do Dia' // O título do eixo foi atualizado
                             }
                         },
                         y: {
@@ -283,4 +292,5 @@
 </body>
 
 </html>
+
 
