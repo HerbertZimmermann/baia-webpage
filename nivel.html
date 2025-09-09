@@ -218,7 +218,7 @@
                     .gte('created_at', new Date(startDate).toISOString())
                     .lte('created_at', new Date(endDate).toISOString())
                     .order('created_at', { ascending: true })
-                    .limit(5000);
+                    .limit(15000);
 
                 const { data, error } = await query;
                 
@@ -292,5 +292,6 @@
 </body>
 
 </html>
+
 
 
