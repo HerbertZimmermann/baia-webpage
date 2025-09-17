@@ -102,9 +102,9 @@
     </div>
 
     <div class="form-group">
-      <label>Valor:</label>
-      <input type="text" id="valorInput" />
-    </div>
+    <label>Valor:</label>
+    <input type="text" id="valorInput" />
+    <button id="btnCalcular">Calcular</button> </div>
 
     <!-- **IMAGE FIELD** -->
     <div class="form-group">
@@ -176,230 +176,250 @@
  </div>
 
   <!-- Supabase + Logic -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
     const supabaseUrl = 'https://khmynualndfvegbbipfd.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTI1NTUsImV4cCI6MjA2NDk2ODU1NX0.Va1zWBLYL87SAz_nIXaiJeGi56YZ1bQ7dAl_fyqS2rI';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     let fornecedorData = [];
 
-    async function carregarPopupFornecedores() {
-      const popup = document.getElementById('popupModal');
-      const tbody = document.querySelector('#popupTable tbody');
-      tbody.innerHTML = '<tr><td colspan="2">Carregando...</td></tr>';
-      popup.style.display = 'block';
+    // --- All functions from here down to DOMContentLoaded are unchanged ---
 
-      const { data, error } = await supabase.from('CadFornecedor').select('ID, Nome');
-      if (error) {
-        tbody.innerHTML = `<tr><td colspan="2">Erro: ${error.message}</td></tr>`;
-        return;
-      }
-      fornecedorData = data;
-      renderFornecedorTable(data);
-      document.getElementById('searchInput').oninput = () => {
-        const term = document.getElementById('searchInput').value.trim().toLowerCase();
-        renderFornecedorTable(fornecedorData.filter(r => r.Nome.toLowerCase().includes(term)));
-      };
+    async function carregarPopupFornecedores() {
+        const popup = document.getElementById('popupModal');
+        const tbody = document.querySelector('#popupTable tbody');
+        tbody.innerHTML = '<tr><td colspan="2">Carregando...</td></tr>';
+        popup.style.display = 'block';
+
+        const { data, error } = await supabase.from('CadFornecedor').select('ID, Nome');
+        if (error) {
+            tbody.innerHTML = `<tr><td colspan="2">Erro: ${error.message}</td></tr>`;
+            return;
+        }
+        fornecedorData = data;
+        renderFornecedorTable(data);
+        document.getElementById('searchInput').oninput = () => {
+            const term = document.getElementById('searchInput').value.trim().toLowerCase();
+            renderFornecedorTable(fornecedorData.filter(r => r.Nome.toLowerCase().includes(term)));
+        };
     }
 
     function renderFornecedorTable(data) {
-      const tbody = document.querySelector('#popupTable tbody');
-      tbody.innerHTML = '';
-      if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="2">Nenhum resultado</td></tr>';
-        return;
-      }
-      data.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${r.ID}</td><td>${r.Nome}</td>`;
-        tr.style.cursor = 'pointer';
-        tr.onclick = () => {
-          document.getElementById('codigoInput').value = r.ID;
-          document.getElementById('fornecedorInput').value = r.Nome;
-          popupModal.style.display = 'none';
-        };
-        tbody.appendChild(tr);
-      });
+        const tbody = document.querySelector('#popupTable tbody');
+        tbody.innerHTML = '';
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="2">Nenhum resultado</td></tr>';
+            return;
+        }
+        data.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${r.ID}</td><td>${r.Nome}</td>`;
+            tr.style.cursor = 'pointer';
+            tr.onclick = () => {
+                document.getElementById('codigoInput').value = r.ID;
+                document.getElementById('fornecedorInput').value = r.Nome;
+                popupModal.style.display = 'none';
+            };
+            tbody.appendChild(tr);
+        });
     }
 
     async function salvarNovoFornecedor() {
-      const nome = document.getElementById('novoNomeInput').value.trim();
-      if (!nome) return alert('Digite um nome válido.');
-      const { data, error } = await supabase.from('CadFornecedor').insert([{ Nome: nome }]);
-      if (error) return alert('Erro ao salvar fornecedor: ' + error.message);
-      document.getElementById('newFornecedorModal').style.display = 'none';
-      document.getElementById('codigoInput').value = data[0].ID;
-      document.getElementById('fornecedorInput').value = data[0].Nome;
+        const nome = document.getElementById('novoNomeInput').value.trim();
+        if (!nome) return alert('Digite um nome válido.');
+        const { data, error } = await supabase.from('CadFornecedor').insert([{ Nome: nome }]);
+        if (error) return alert('Erro ao salvar fornecedor: ' + error.message);
+        document.getElementById('newFornecedorModal').style.display = 'none';
+        document.getElementById('codigoInput').value = data[0].ID;
+        document.getElementById('fornecedorInput').value = data[0].Nome;
     }
 
     async function carregarModosPagamento() {
-      const sel = document.getElementById('modoPagSelect');
-      const { data, error } = await supabase.from('CadModPag').select('Nome');
-      if (!error) data.forEach(r => sel.append(new Option(r.Nome, r.Nome)));
+        const sel = document.getElementById('modoPagSelect');
+        const { data, error } = await supabase.from('CadModPag').select('Nome');
+        if (!error) data.forEach(r => sel.append(new Option(r.Nome, r.Nome)));
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      // Pre-fill date
-      const dt = new Date();
-      document.getElementById('dataInput').value =
-        `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+    // ================== START OF CHANGES ==================
 
-      carregarModosPagamento();
-
-      // Enter on Valor to fill parcelas
-      document.getElementById('valorInput').addEventListener('keydown', e => {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
+    // 1. Created a reusable function with the calculation logic
+    function calcularEExibirParcelas() {
         const dataBase = document.getElementById('dataInput').value;
         const parcelas = +document.getElementById('parcelasSelect').value;
         const dias = +document.getElementById('diasParcelasInput').value;
-        const valorTotal = parseFloat(e.target.value.replace(',', '.'));
+        // Use the 'valorInput' element directly here
+        const valorTotal = parseFloat(document.getElementById('valorInput').value.replace(',', '.'));
+
         if (!dataBase || isNaN(parcelas) || isNaN(dias) || isNaN(valorTotal))
-          return alert('Verifique os campos Data, Parcelas, Dias Parcelas e Valor.');
+            return alert('Verifique os campos Data, Parcelas, Dias Parcelas e Valor.');
+
         const [dia, mes, ano] = dataBase.split('/');
         const base = new Date(`${ano}-${mes}-${dia}`);
         const pVal = (valorTotal / parcelas).toFixed(2);
         const body = document.getElementById('parcelas-body');
         body.innerHTML = '';
         for (let i = 0; i < parcelas; i++) {
-          const v = new Date(base);
-          v.setDate(v.getDate() + dias * i);
-          const vd = String(v.getDate()).padStart(2,'0');
-          const vm = String(v.getMonth()+1).padStart(2,'0');
-          const vy = v.getFullYear();
-          const tr = document.createElement('tr');
-          tr.innerHTML =
-            `<td contenteditable="true">${i+1}</td>` +
-            `<td contenteditable="true" class="data-venc-cell">${vd}/${vm}/${vy}</td>` +
-            `<td contenteditable="true">${pVal}</td>`;
-          body.appendChild(tr);
+            const v = new Date(base);
+            v.setDate(v.getDate() + dias * i);
+            const vd = String(v.getDate()).padStart(2,'0');
+            const vm = String(v.getMonth()+1).padStart(2,'0');
+            const vy = v.getFullYear();
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                `<td contenteditable="true">${i+1}</td>` +
+                `<td contenteditable="true" class="data-venc-cell">${vd}/${vm}/${vy}</td>` +
+                `<td contenteditable="true">${pVal}</td>`;
+            body.appendChild(tr);
         }
-      });
+    }
 
-      // Double-click & button to open fornecedor popup
-      document.getElementById('codigoInput')
-        .addEventListener('dblclick', carregarPopupFornecedores);
-      document.getElementById('btnAddFornecedor')
-        .addEventListener('click', () => {
-          document.getElementById('newFornecedorModal').style.display = 'block';
-          document.getElementById('novoNomeInput').value = '';
+
+    window.addEventListener('DOMContentLoaded', () => {
+        // Pre-fill date
+        const dt = new Date();
+        document.getElementById('dataInput').value =
+            `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+
+        carregarModosPagamento();
+
+        // 2. Updated the 'Enter' key listener to call the new function
+        document.getElementById('valorInput').addEventListener('keydown', e => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            calcularEExibirParcelas();
         });
 
-      // Save
-      document.querySelector('.btn-submit')
-        .addEventListener('click', salvarConta);
-
-      // Date mask
-      document.getElementById('dataInput')
-        .addEventListener('input', e => {
-          let v = e.target.value.replace(/\D/g, '');
-          if (v.length>4) v = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4,8);
-          else if (v.length>2) v = v.slice(0,2)+'/'+v.slice(2);
-          e.target.value = v;
+        // 3. Added a click listener for the new button that ALSO calls the new function
+        document.getElementById('btnCalcular').addEventListener('click', () => {
+            calcularEExibirParcelas();
         });
+
+    // =================== END OF CHANGES ===================
+
+        // Double-click & button to open fornecedor popup
+        document.getElementById('codigoInput')
+            .addEventListener('dblclick', carregarPopupFornecedores);
+        document.getElementById('btnAddFornecedor')
+            .addEventListener('click', () => {
+                document.getElementById('newFornecedorModal').style.display = 'block';
+                document.getElementById('novoNomeInput').value = '';
+            });
+
+        // Save
+        document.querySelector('.btn-submit')
+            .addEventListener('click', salvarConta);
+
+        // Date mask
+        document.getElementById('dataInput')
+            .addEventListener('input', e => {
+                let v = e.target.value.replace(/\D/g, '');
+                if (v.length>4) v = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4,8);
+                else if (v.length>2) v = v.slice(0,2)+'/'+v.slice(2);
+                e.target.value = v;
+            });
     });
 
+    // --- The 'salvarConta' function is unchanged ---
     async function salvarConta() {
-      // Build ISO date
-      const [d,m,y] = document.getElementById('dataInput').value.split('/');
-      const iso = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-      const codigo = document.getElementById('codigoInput').value.trim();
-      const numero = document.getElementById('numeroInput').value.trim();
-      const valor = document.getElementById('valorInput').value.trim();
-      const modopag = document.getElementById('modoPagSelect').value;
-      const parcelas = +document.getElementById('parcelasSelect').value;
-      if (!iso||!codigo||!numero||!valor||!modopag||isNaN(parcelas))
-        return alert('Preencha todos os campos obrigatórios.');
+        // Build ISO date
+        const [d,m,y] = document.getElementById('dataInput').value.split('/');
+        const iso = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+        const codigo = document.getElementById('codigoInput').value.trim();
+        const numero = document.getElementById('numeroInput').value.trim();
+        const valor = document.getElementById('valorInput').value.trim();
+        const modopag = document.getElementById('modoPagSelect').value;
+        const parcelas = +document.getElementById('parcelasSelect').value;
+        if (!iso||!codigo||!numero||!valor||!modopag||isNaN(parcelas))
+            return alert('Preencha todos os campos obrigatórios.');
 
-      // Image upload
-      let publicUrl = '';
-      const file = document.getElementById('imageInput').files[0];
-      if (file) {
-        const path = `titulos/${Date.now()}_${file.name}`;
-        let { error: upErr } = await supabase.storage.from('images').upload(path, file);
-        if (upErr) return alert('Erro ao enviar imagem: '+upErr.message);
-        const { data: urlData, error: urlErr } =
-          supabase.storage.from('images').getPublicUrl(path);
-        if (urlErr) return alert('Erro ao obter URL: '+urlErr.message);
-        publicUrl = urlData.publicUrl;
-      }
+        // Image upload
+        let publicUrl = '';
+        const file = document.getElementById('imageInput').files[0];
+        if (file) {
+            const path = `titulos/${Date.now()}_${file.name}`;
+            let { error: upErr } = await supabase.storage.from('images').upload(path, file);
+            if (upErr) return alert('Erro ao enviar imagem: '+upErr.message);
+            const { data: urlData, error: urlErr } =
+                supabase.storage.from('images').getPublicUrl(path);
+            if (urlErr) return alert('Erro ao obter URL: '+urlErr.message);
+            publicUrl = urlData.publicUrl;
+        }
 
-      // Insert Titulos
-      const { error: tErr } = await supabase.from('Titulos').insert([{
-        DATA: iso,
-        FORNECEDOR: codigo,
-        NUMERO: numero,
-        VALOR: parseFloat(valor.replace(',', '.')),
-        MODOPAG: modopag,
-        PARCELAS: parcelas,
-        imagem_url: publicUrl
-      }]);
-      if (tErr) return alert('Erro ao salvar título: '+tErr.message);
+        // Insert Titulos
+        const { error: tErr } = await supabase.from('Titulos').insert([{
+            DATA: iso,
+            FORNECEDOR: codigo,
+            NUMERO: numero,
+            VALOR: parseFloat(valor.replace(',', '.')),
+            MODOPAG: modopag,
+            PARCELAS: parcelas,
+            imagem_url: publicUrl
+        }]);
+        if (tErr) return alert('Erro ao salvar título: '+tErr.message);
 
-      // Decide status logic
-      const radios = document.getElementsByName('liquidar');
-      const logic = radios[0].checked ? 'todos'
-                   : radios[1].checked ? 'primeiro' : 'nenhum';
+        // Decide status logic
+        const radios = document.getElementsByName('liquidar');
+        const logic = radios[0].checked ? 'todos'
+                                : radios[1].checked ? 'primeiro' : 'nenhum';
 
-      // Insert Parcelas
-      const rows = document.querySelectorAll('#parcelas-body tr');
-      for (let i=0; i<rows.length; i++){
-        const cols = rows[i].cells;
-        const [vd, vm, vy] = cols[1].innerText.split('/');
-        const dt = `${vy}-${vm.padStart(2,'0')}-${vd.padStart(2,'0')}`;
-        const vp = parseFloat(cols[2].innerText.replace(',','.'));
-        let status = 'ABERTO';
-        if (logic==='todos'||(logic==='primeiro'&&i===0)) status='LIQUIDADO';
-        const obj = {
-          DATAVENC: dt,
-          PARCELA: i+1,
-          VALORPARCELA: vp,
-          FORNECEDOR: codigo,
-          NUMERO: numero,
-          MODPAG: modopag,
-          STATUS: status,
-	  url: publicUrl
+        // Insert Parcelas
+        const rows = document.querySelectorAll('#parcelas-body tr');
+        for (let i=0; i<rows.length; i++){
+            const cols = rows[i].cells;
+            const [vd, vm, vy] = cols[1].innerText.split('/');
+            const dt = `${vy}-${vm.padStart(2,'0')}-${vd.padStart(2,'0')}`;
+            const vp = parseFloat(cols[2].innerText.replace(',','.'));
+            let status = 'ABERTO';
+            if (logic==='todos'||(logic==='primeiro'&&i===0)) status='LIQUIDADO';
+            const obj = {
+                DATAVENC: dt,
+                PARCELA: i+1,
+                VALORPARCELA: vp,
+                FORNECEDOR: codigo,
+                NUMERO: numero,
+                MODPAG: modopag,
+                STATUS: status,
+                url: publicUrl
+            };
+            if (status==='LIQUIDADO') obj.VALORPAG = vp;
+            const { error: pErr } = await supabase.from('Parcelas').insert([obj]);
+            if (pErr) return alert(`Erro na parcela ${i+1}: ${pErr.message}`);
+        }
+
+        alert('Conta salva com sucesso!');
+        // Safely clear inputs
+        const clearValueById = id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
         };
-        if (status==='LIQUIDADO') obj.VALORPAG = vp;
-        const { error: pErr } = await supabase.from('Parcelas').insert([obj]);
-        if (pErr) return alert(`Erro na parcela ${i+1}: ${pErr.message}`);
-      }
 
-      alert('Conta salva com sucesso!');
-      // Safely clear inputs
-const clearValueById = id => {
-  const el = document.getElementById(id);
-  if (el) el.value = '';
-};
+        clearValueById('codigoInput');
+        clearValueById('fornecedorInput');
+        clearValueById('valorInput');
 
+        // Clear 'Número' input field
+        const numeroInput = document.getElementById('numeroInput');
+        if (numeroInput) numeroInput.value = '';
 
-clearValueById('codigoInput');
-clearValueById('fornecedorInput');
-clearValueById('valorInput');
+        // Reset selects
+        const parcelasSelect = document.getElementById('parcelasSelect');
+        if (parcelasSelect) parcelasSelect.selectedIndex = 0;
 
-// Clear 'Número' input field (no id, so select by placeholder)
-const numeroInput = document.getElementById('numeroInput');
-if (numeroInput) numeroInput.value = '';
+        const modoPagSelect = document.getElementById('modoPagSelect');
+        if (modoPagSelect) modoPagSelect.selectedIndex = 0;
 
-// Reset selects
-const parcelasSelect = document.getElementById('parcelasSelect');
-if (parcelasSelect) parcelasSelect.selectedIndex = 0;
+        // Clear table
+        const tbody = document.getElementById('parcelas-body');
+        if (tbody) tbody.innerHTML = '';
 
-const modoPagSelect = document.querySelector('select');
-if (modoPagSelect) modoPagSelect.selectedIndex = 0;
-
-// Clear table
-const tbody = document.getElementById('parcelas-body');
-if (tbody) tbody.innerHTML = '';
-
-// Reset radio buttons (set "Nenhum")
-const radios2 = document.querySelectorAll('input[name="liquidar"]');
-if (radios2.length === 3) {
-  radios2.forEach((r, i) => r.checked = i === 2);
-}
+        // Reset radio buttons (set "Nenhum")
+        const radios2 = document.querySelectorAll('input[name="liquidar"]');
+        if (radios2.length === 3) {
+            radios2.forEach((r, i) => r.checked = i === 2);
+        }
     }
-  </script>
+</script>
 
    <!-- Reveal app once login check passed -->
    <script>
@@ -409,5 +429,6 @@ if (radios2.length === 3) {
    </script>
  </body>
 </html>
+
 
 
