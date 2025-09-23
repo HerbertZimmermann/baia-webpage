@@ -398,28 +398,34 @@
                                 : radios[1].checked ? 'primeiro' : 'nenhum';
 
         const rows = document.querySelectorAll('#parcelas-body tr');
-        for (let i=0; i<rows.length; i++){
-            const cols = rows[i].cells;
-            const [vd, vm, vy] = cols[1].innerText.split('/');
-            const dt = `${vy}-${vm.padStart(2,'0')}-${vd.padStart(2,'0')}`;
-            const vp = parseFloat(cols[2].innerText.replace(',','.'));
-            let status = 'ABERTO';
-            if (logic==='todos'||(logic==='primeiro'&&i===0)) status='LIQUIDADO';
-            const obj = {
-                DATAVENC: dt,
-                PARCELA: i+1,
-                VALORPARCELA: vp,
-                FORNECEDOR: codigo,
-                NUMERO: numero,
-                MODPAG: modopag,
-                STATUS: status,
-                url: publicUrl
-                
-            };
-            if (status==='LIQUIDADO') obj.VALORPAG = vp;
-            const { error: pErr } = await supabase.from('Parcelas').insert([obj]);
-            if (pErr) return alert(`Erro na parcela ${i+1}: ${pErr.message}`);
-        }
+for (let i=0; i<rows.length; i++){
+    const cols = rows[i].cells;
+    const [vd, vm, vy] = cols[1].innerText.split('/');
+    const dt = `${vy}-${vm.padStart(2,'0')}-${vd.padStart(2,'0')}`;
+    const vp = parseFloat(cols[2].innerText.replace(',','.'));
+    let status = 'ABERTO';
+    if (logic==='todos'||(logic==='primeiro'&&i===0)) status='LIQUIDADO';
+
+    // --- START OF CORRECTION ---
+    // Replace the old 'obj' and 'if' statement with this
+    const obj = {
+        DATAVENC: dt,
+        PARCELA: i+1,
+        VALORPARCELA: vp,
+        FORNECEDOR: codigo,
+        NUMERO: numero,
+        MODPAG: modopag,
+        STATUS: status,
+        url: publicUrl,
+        // This line ensures VALORPAG is 0 if status is not LIQUIDADO
+        VALORPAG: status === 'LIQUIDADO' ? vp : 0
+    };
+    // --- END OF CORRECTION ---
+    
+    // The rest of your code remains the same
+    const { error: pErr } = await supabase.from('Parcelas').insert([obj]);
+    if (pErr) return alert(`Erro na parcela ${i+1}: ${pErr.message}`);
+}
 
         alert('Conta salva com sucesso!');
         // Safely clear inputs
@@ -461,6 +467,7 @@
 </script>
  </body>
 </html>
+
 
 
 
