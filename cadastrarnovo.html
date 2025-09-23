@@ -413,8 +413,8 @@
                 NUMERO: numero,
                 MODPAG: modopag,
                 STATUS: status,
-                url: publicUrl,
-                IDTitulo: lastInsertedID // Link this parcel to the 'Titulos' record
+                url: publicUrl
+                
             };
             if (status==='LIQUIDADO') obj.VALORPAG = vp;
             const { error: pErr } = await supabase.from('Parcelas').insert([obj]);
@@ -461,6 +461,7 @@
 </script>
  </body>
 </html>
+
 
 
 
