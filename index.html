@@ -96,7 +96,7 @@
 
     // 2) RPC wrapper to call your verify_user function
     async function handleCustomLogin(username, password) {
-      const { data: allowed, error } = await supabase
+      const { data: allowed, error } = await supabaseClient
         .rpc('verify_user', { in_username: username, in_password: password });
       if (error) {
         console.error('RPC error:', error);
@@ -153,6 +153,7 @@
   </script>
 </body>
 </html>
+
 
 
 
