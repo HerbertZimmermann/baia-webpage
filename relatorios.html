@@ -205,7 +205,7 @@ tr:hover {
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
-const supabase = window.supabase.createClient(
+const supabaseClient = window.supabase.createClient(
   'https://khmynualndfvegbbipfd.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTI1NTUsImV4cCI6MjA2NDk2ODU1NX0.Va1zWBLYL87SAz_nIXaiJeGi56YZ1bQ7dAl_fyqS2rI'
 );
@@ -218,7 +218,7 @@ async function carregarPopupFornecedores() {
   tbody.innerHTML = '<tr><td colspan="2">Carregando...</td></tr>';
   popup.style.display = 'block';
 
-  const { data, error } = await supabase.from('CadFornecedor').select('ID, Nome');
+  const { data, error } = await supabaseClient.from('CadFornecedor').select('ID, Nome');
   if (error) {
     tbody.innerHTML = `<tr><td colspan="2">Erro: ${error.message}</td></tr>`;
     return;
@@ -264,7 +264,7 @@ document.getElementById('btnVerMensal').addEventListener('click', verMensalComSu
 
 
 async function carregarStatusUnicos() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('Parcelas')
     .select('STATUS', { distinct: true });
 
@@ -509,7 +509,7 @@ const valorPago = parseDecimalRaw(document.getElementById('edit-valorpago').valu
         return `${yyyy}-${mm}-${dd}`;
       };
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('Parcelas')
         .update({
           DATAVENC: formatToISO(dataVenc),
@@ -576,7 +576,7 @@ function formatBRL(value) {
 
 // Daily aggregation: sum VALORPARCELA by exact date where STATUS = 'ABERTO'
 async function verDiario() {
-  let query = supabase
+  let query = supabaseClient
     .from('Parcelas')
     .select('DATAVENC, VALORPARCELA, STATUS')
     .eq('STATUS', 'ABERTO')
@@ -631,7 +631,7 @@ async function verDiario() {
 
 // Monthly aggregation with month and year subtotals and grand total
 async function verMensalComSubtotais() {
-  let query = supabase
+  let query = supabaseClient
     .from('Parcelas')
     .select('DATAVENC, VALORPARCELA, STATUS')
     .eq('STATUS', 'ABERTO')
@@ -848,5 +848,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
 
 
