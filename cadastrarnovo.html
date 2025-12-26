@@ -180,7 +180,7 @@
 <script>
     const supabaseUrl = 'https://khmynualndfvegbbipfd.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTI1NTUsImV4cCI6MjA2NDk2ODU1NX0.Va1zWBLYL87SAz_nIXaiJeGi56YZ1bQ7dAl_fyqS2rI';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     let fornecedorData = [];
     // ================== START OF CHANGES (Part 1) ==================
@@ -195,7 +195,7 @@
         tbody.innerHTML = '<tr><td colspan="2">Carregando...</td></tr>';
         popup.style.display = 'block';
 
-        const { data, error } = await supabase.from('CadFornecedor').select('ID, Nome');
+        const { data, error } = await supabaseClient.from('CadFornecedor').select('ID, Nome');
         if (error) {
             tbody.innerHTML = `<tr><td colspan="2">Erro: ${error.message}</td></tr>`;
             return;
@@ -232,7 +232,7 @@
         const nome = document.getElementById('novoNomeInput').value.trim();
         if (!nome) return alert('Digite um nome válido.');
         // This should return the newly created record
-        const { data, error } = await supabase.from('CadFornecedor').insert([{ Nome: nome }]).select();
+        const { data, error } = await supabaseClient.from('CadFornecedor').insert([{ Nome: nome }]).select();
         if (error) return alert('Erro ao salvar fornecedor: ' + error.message);
         document.getElementById('newFornecedorModal').style.display = 'none';
         // Check if data is returned and has at least one element
@@ -244,7 +244,7 @@
 
     async function carregarModosPagamento() {
         const sel = document.getElementById('modoPagSelect');
-        const { data, error } = await supabase.from('CadModPag').select('Nome');
+        const { data, error } = await supabaseClient.from('CadModPag').select('Nome');
         if (!error) data.forEach(r => sel.append(new Option(r.Nome, r.Nome)));
     }
 
@@ -373,14 +373,14 @@
             const fileExtension = file.name.split('.').pop() || 'png';
             const path = `titulos/${Date.now()}.${fileExtension}`;
             
-            let { error: upErr } = await supabase.storage.from('images').upload(path, file);
+            let { error: upErr } = await supabaseClient.storage.from('images').upload(path, file);
             if (upErr) return alert('Erro ao enviar imagem: '+upErr.message);
             
-            const { data: urlData } = supabase.storage.from('images').getPublicUrl(path);
+            const { data: urlData } = supabaseClient.storage.from('images').getPublicUrl(path);
             publicUrl = urlData.publicUrl;
         }
 
-        const { data: insertedTirulos, error: tErr } = await supabase.from('Titulos').insert([{
+        const { data: insertedTirulos, error: tErr } = await supabaseClient.from('Titulos').insert([{
             DATA: iso,
             FORNECEDOR: codigo,
             NUMERO: numero,
@@ -423,7 +423,7 @@ for (let i=0; i<rows.length; i++){
     // --- END OF CORRECTION ---
     
     // The rest of your code remains the same
-    const { error: pErr } = await supabase.from('Parcelas').insert([obj]);
+    const { error: pErr } = await supabaseClient.from('Parcelas').insert([obj]);
     if (pErr) return alert(`Erro na parcela ${i+1}: ${pErr.message}`);
 }
 
@@ -467,6 +467,7 @@ for (let i=0; i<rows.length; i++){
 </script>
  </body>
 </html>
+
 
 
 
