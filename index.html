@@ -91,7 +91,8 @@
     // 1) Init Supabase client
     const supabaseUrl = 'https://khmynualndfvegbbipfd.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobXludWFsbmRmdmVnYmJpcGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTI1NTUsImV4cCI6MjA2NDk2ODU1NX0.Va1zWBLYL87SAz_nIXaiJeGi56YZ1bQ7dAl_fyqS2rI';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     // 2) RPC wrapper to call your verify_user function
     async function handleCustomLogin(username, password) {
@@ -152,5 +153,6 @@
   </script>
 </body>
 </html>
+
 
 
