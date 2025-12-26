@@ -305,7 +305,7 @@ async function buscarParcelas() {
   const ate = document.getElementById('dataAte').value;
   const fornecedor = document.getElementById('fornecedorIdInput').value.trim();
 
-  let query = supabase
+  let query = supabaseClient
     .from('Parcelas')
     .select(`
       ID,
@@ -451,7 +451,7 @@ function LiquidarModal() {
     return;
   }
 
-  supabase
+  supabaseClient
     .from('Parcelas')
     .update({
       VALORPAG: valorPago,
@@ -848,6 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
 
 
 
