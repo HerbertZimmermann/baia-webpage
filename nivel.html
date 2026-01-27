@@ -218,8 +218,9 @@
                     .select('created_at, distance, silo_id')
                     .gte('created_at', new Date(startDate).toISOString())
                     .lte('created_at', new Date(endDate).toISOString())
+                    .lt('distance', 1000)
                     .order('created_at', { ascending: true })
-                    .limit(15000);
+                    .limit(150000);
 
                 const { data, error } = await query;
                 
@@ -293,6 +294,7 @@
 </body>
 
 </html>
+
 
 
 
