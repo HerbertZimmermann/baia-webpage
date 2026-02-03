@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nível dos Silos</title>
+    <title>Nível dos Silos - Análise Avançada</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -87,12 +86,12 @@
 
         <div class="filters">
             <div class="filter-group">
-                <label for="startDate">Data e Hora de Início:</label>
+                <label for="startDate">Início:</label>
                 <input type="datetime-local" id="startDate">
             </div>
 
             <div class="filter-group">
-                <label for="endDate">Data e Hora de Fim:</label>
+                <label for="endDate">Fim:</label>
                 <input type="datetime-local" id="endDate">
             </div>
 
@@ -102,6 +101,16 @@
                     <option value="all">Ambos</option>
                     <option value="1">Silo 1</option>
                     <option value="2">Silo 2</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="viewType">Tipo de Visualização:</label>
+                <select id="viewType">
+                    <option value="raw">Dados Brutos (Raw)</option>
+                    <option value="sma15">Média Móvel (15 min)</option>
+                    <option value="sma60">Média Móvel (60 min)</option>
+                    <option value="smart" selected>Filtro Inteligente (Recomendado)</option>
                 </select>
             </div>
 
@@ -119,18 +128,17 @@
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Referências aos elementos do HTML
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
         const siloSelect = document.getElementById('siloSelect');
+        const viewTypeSelect = document.getElementById('viewType');
         const updateButton = document.getElementById('updateButton');
         const ctx = document.getElementById('siloChart').getContext('2d');
         
         let siloLevelChart;
+        // Armazenamos os dados brutos aqui para não precisar baixar tudo de novo ao trocar o filtro
+        let cachedRawData = { silo1: [], silo2: [] };
 
-        /**
-         * Inicializa um gráfico Chart.js vazio.
-         */
         function initializeChart() {
             siloLevelChart = new Chart(ctx, {
                 type: 'line',
@@ -142,6 +150,7 @@
                         data: [],
                         tension: 0.1,
                         borderWidth: 2,
+                        pointRadius: 1 // Pontos menores para visualização mais limpa
                     }, {
                         label: 'Silo 2',
                         borderColor: 'rgb(255, 99, 132)',
@@ -149,60 +158,136 @@
                         data: [],
                         tension: 0.1,
                         borderWidth: 2,
+                        pointRadius: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
                     scales: {
                         x: {
                             type: 'time',
                             time: {
-                                // 1. Força o eixo a usar 'hora' como sua unidade principal
                                 unit: 'hour', 
-                                
-                                // 2. Mantém o tooltip detalhado ao passar o mouse
                                 tooltipFormat: 'dd/MM/yyyy HH:mm',
-
-                                // 3. Formata a exibição do rótulo para mostrar apenas o número da hora (0-23)
-                                displayFormats: {
-                                    hour: 'H' 
-                                }
+                                displayFormats: { hour: 'HH:mm' }
                             },
-                            title: {
-                                display: true,
-                                text: 'Hora do Dia' // O título do eixo foi atualizado
-                            }
+                            title: { display: true, text: 'Horário' }
                         },
                         y: {
                             beginAtZero: true,
-                            reverse: true,
-                            title: {
-                                display: true,
-                                text: 'Distância (cm)'
-                            },
+                            reverse: true, // Distância maior = Nível menor
+                            title: { display: true, text: 'Distância (cm) - Invertido' }
                         }
                     },
                     plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                        }
+                        legend: { position: 'top' }
                     }
                 }
             });
         }
 
-        /**
-         * Busca os dados no Supabase com base nos filtros e atualiza o gráfico.
-         */
+        // --- FUNÇÕES DE CÁLCULO (MÉDIAS E FILTROS) ---
+
+        // 1. Média Móvel baseada em TEMPO (Janela Deslizante)
+        function calculateSMA(data, windowMinutes) {
+            if (!data || data.length === 0) return [];
+            let result = [];
+            let windowMs = windowMinutes * 60 * 1000;
+            let sum = 0;
+            let queue = []; // Fila para guardar pontos dentro da janela
+
+            for (let point of data) {
+                // Adiciona novo ponto
+                queue.push(point);
+                sum += point.y;
+
+                // Remove pontos velhos (fora da janela de tempo)
+                while (queue.length > 0 && (point.x - queue[0].x > windowMs)) {
+                    let removed = queue.shift();
+                    sum -= removed.y;
+                }
+
+                // Calcula média
+                if (queue.length > 0) {
+                    result.push({ x: point.x, y: sum / queue.length });
+                }
+            }
+            return result;
+        }
+
+        // 2. Filtro "Valley Follower" (Filtro Inteligente)
+        // Segue rápido quando a distância cai (nível sobe/parede cai)
+        // Segue devagar quando a distância sobe (furo formando)
+        function calculateSmartFilter(data) {
+            if (!data || data.length === 0) return [];
+            let result = [];
+            
+            // Pega o primeiro valor como inicial
+            let currentVal = data[0].y;
+            let alphaRise = 1.0;  // 100% de confiança quando o nível sobe (distância diminui)
+            let alphaFall = 0.05; // 5% de confiança quando o nível desce (furo) - Ignora o buraco
+
+            result.push({ x: data[0].x, y: currentVal });
+
+            for (let i = 1; i < data.length; i++) {
+                let rawVal = data[i].y;
+                
+                // Nota: No gráfico invertido, "Distância Diminui" = Valor numérico menor
+                if (rawVal < currentVal) {
+                    // Parede caiu (Distância diminuiu abruptamente) -> Aceita rápido
+                    currentVal = currentVal + alphaRise * (rawVal - currentVal);
+                } else {
+                    // Buraco formando (Distância aumentando) -> Aceita devagar
+                    currentVal = currentVal + alphaFall * (rawVal - currentVal);
+                }
+                result.push({ x: data[i].x, y: currentVal });
+            }
+            return result;
+        }
+
+        // --- LÓGICA DE DADOS ---
+
+        function processDataAndRender() {
+            const viewType = viewTypeSelect.value;
+            const selectedSilo = siloSelect.value;
+            
+            let dataS1 = [];
+            let dataS2 = [];
+
+            // Seleciona o algoritmo com base no combobox
+            if (viewType === 'raw') {
+                dataS1 = cachedRawData.silo1;
+                dataS2 = cachedRawData.silo2;
+            } else if (viewType === 'sma15') {
+                dataS1 = calculateSMA(cachedRawData.silo1, 15);
+                dataS2 = calculateSMA(cachedRawData.silo2, 15);
+            } else if (viewType === 'sma60') {
+                dataS1 = calculateSMA(cachedRawData.silo1, 60);
+                dataS2 = calculateSMA(cachedRawData.silo2, 60);
+            } else if (viewType === 'smart') {
+                dataS1 = calculateSmartFilter(cachedRawData.silo1);
+                dataS2 = calculateSmartFilter(cachedRawData.silo2);
+            }
+
+            // Atualiza o gráfico
+            siloLevelChart.data.datasets[0].data = dataS1;
+            siloLevelChart.data.datasets[1].data = dataS2;
+            
+            // Controla visibilidade
+            siloLevelChart.data.datasets[0].hidden = (selectedSilo === '2');
+            siloLevelChart.data.datasets[1].hidden = (selectedSilo === '1');
+
+            siloLevelChart.update();
+        }
+
         async function fetchDataAndDrawChart() {
             const startDate = startDateInput.value;
             const endDate = endDateInput.value;
-            const selectedSilo = siloSelect.value;
             
             if (!startDate || !endDate) {
                 alert('Por favor, selecione as datas de início e fim.');
@@ -219,63 +304,45 @@
                     .gte('created_at', new Date(startDate).toISOString())
                     .lte('created_at', new Date(endDate).toISOString())
                     .lt('distance', 1000)
+                    .gt('distance', 0) // <-- FILTRO NOVO: Ignora zeros e negativos
                     .order('created_at', { ascending: true })
                     .limit(150000);
 
                 const { data, error } = await query;
                 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
-                const silo1Data = [];
-                const silo2Data = [];
+                // Limpa cache
+                cachedRawData.silo1 = [];
+                cachedRawData.silo2 = [];
 
+                // Separa os dados brutos
                 data.forEach(leitura => {
                     const point = {
                         x: new Date(leitura.created_at),
                         y: leitura.distance
                     };
-
-                    if (leitura.silo_id === 1) {
-                        silo1Data.push(point);
-                    } else if (leitura.silo_id === 2) {
-                        silo2Data.push(point);
-                    }
+                    if (leitura.silo_id === 1) cachedRawData.silo1.push(point);
+                    else if (leitura.silo_id === 2) cachedRawData.silo2.push(point);
                 });
 
-                siloLevelChart.data.datasets[0].data = silo1Data;
-                siloLevelChart.data.datasets[1].data = silo2Data;
-                
-                siloLevelChart.data.datasets[0].hidden = (selectedSilo === '2');
-                siloLevelChart.data.datasets[1].hidden = (selectedSilo === '1');
-
-                siloLevelChart.update();
+                // Processa e desenha
+                processDataAndRender();
 
             } catch (error) {
-                console.error('Erro ao buscar dados do Supabase:', error);
-                alert('Falha ao carregar os dados do Supabase. Verifique o console para mais detalhes.');
+                console.error('Erro:', error);
+                alert('Erro ao carregar dados.');
             } finally {
                 updateButton.textContent = 'Atualizar Gráfico';
                 updateButton.disabled = false;
             }
         }
 
-        /**
-         * Formata um objeto Date para o formato que o input datetime-local aceita (YYYY-MM-DDTHH:mm).
-         */
         function formatDateForInput(date) {
             const pad = (num) => num.toString().padStart(2, '0');
-            const year = date.getFullYear();
-            const month = pad(date.getMonth() + 1);
-            const day = pad(date.getDate());
-            const hours = pad(date.getHours());
-            const minutes = pad(date.getMinutes());
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
         }
         
-        // --- CÓDIGO DE INICIALIZAÇÃO ---
-        // Roda quando a página termina de carregar
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -284,7 +351,12 @@
             startDateInput.value = formatDateForInput(startOfDay);
             endDateInput.value = formatDateForInput(endOfDay);
             
+            // Listeners
             updateButton.addEventListener('click', fetchDataAndDrawChart);
+            
+            // Quando mudar o tipo de visualização, reprocessa sem buscar no banco de novo (rápido)
+            viewTypeSelect.addEventListener('change', processDataAndRender);
+            siloSelect.addEventListener('change', processDataAndRender);
 
             initializeChart();
             fetchDataAndDrawChart();
@@ -292,10 +364,4 @@
 
     </script>
 </body>
-
 </html>
-
-
-
-
-
